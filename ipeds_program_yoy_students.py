@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 # CONFIG — EDIT FILE PATHS
 # =========================
 FILES_BY_YEAR: Dict[int, Union[str, Path]] = {
-    2019: "data_stu/c2019_c.csv",   # <- update paths if needed
+    2019: "data_stu/c2019_c.csv",
     2020: "data_stu/c2020_c.csv",
     2021: "data_stu/c2021_c.csv",
     2022: "data_stu/c2022_c.csv",
@@ -17,104 +17,97 @@ FILES_BY_YEAR: Dict[int, Union[str, Path]] = {
     2024: "data_stu/c2024_c.csv",
 }
 
-EXCEL_SHEET = None   # use first sheet; change if needed
-
 COL_UNITID = "UNITID"
-COL_CIP = "CIPCODE"
-COL_AWLEVEL = "AWLEVEL"
-COL_MAJORNUM = "MAJORNUM"
-COL_TOTAL = "CTOTALT"
 
-KEEP_PRIMARY_MAJOR_ONLY = True   # prevents double counting
-PRIMARY_MAJOR_VALUE = 1
+# In student completion "C" files:
+COL_AWLEVELC = "AWLEVELC"   # award level (completion file)
+COL_TOTAL_COMPLETIONS = "CSTOTLT"  # actual total completions (NOT XC...)
 
-COMBINED_OUT = "data/completions_students_2019_2024.csv"
-OUT_XLSX = "cip_awlevel_students_yoy_2019_2024.xlsx"
+COMBINED_OUT = "data_stu/completions_students_2019_2024.csv"
+OUT_XLSX = "awlevelc_students_yoy_2019_2024.xlsx"
 SHEET_NAME = "Student YoY Summary"
+
+YEARS = list(range(2019, 2025))
 
 # =========================
 # 1) BUILD COMBINED FILE
 # =========================
 frames = []
-
 for year, path in FILES_BY_YEAR.items():
     path = Path(path)
 
-    if path.suffix.lower() in [".xlsx", ".xls"]:
-        df = pd.read_excel(path, sheet_name=EXCEL_SHEET)
-    else:
-        df = pd.read_csv(path)
+    # Read CSV (IPEDS is often messy; keep low_memory=False)
+    df = pd.read_csv(path, low_memory=False)
 
-    # Standardize columns
-    for c in [COL_UNITID, COL_CIP, COL_AWLEVEL, COL_MAJORNUM]:
-        if c in df.columns:
-            df[c] = df[c].astype("string").str.strip()
+    # Clean + standardize
+    if COL_UNITID in df.columns:
+        df[COL_UNITID] = df[COL_UNITID].astype("string").str.strip()
 
-    df[COL_TOTAL] = pd.to_numeric(df[COL_TOTAL], errors="coerce").fillna(0)
+    if COL_AWLEVELC in df.columns:
+        df[COL_AWLEVELC] = df[COL_AWLEVELC].astype("string").str.strip()
+
+    # CSTOTLT is numeric total completions
+    # (Your example has CSTOTLT=560; XCSTOTLT="R" is a flag, not numeric)
+    df[COL_TOTAL_COMPLETIONS] = pd.to_numeric(df[COL_TOTAL_COMPLETIONS], errors="coerce").fillna(0)
+
     df["YEAR"] = year
 
-    keep_cols = [COL_UNITID, COL_CIP, COL_MAJORNUM, COL_AWLEVEL, COL_TOTAL, "YEAR"]
-    df = df[keep_cols]
+    keep_cols = [COL_UNITID, COL_AWLEVELC, COL_TOTAL_COMPLETIONS, "YEAR"]
+    missing = [c for c in keep_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"{path} is missing expected columns: {missing}")
 
+    df = df[keep_cols]
     frames.append(df)
 
-combined = pd.concat(frames, ignore_index=True)
-
-# keep first major only
-if KEEP_PRIMARY_MAJOR_ONLY and COL_MAJORNUM in combined.columns:
-    combined[COL_MAJORNUM] = pd.to_numeric(combined[COL_MAJORNUM], errors="coerce")
-    combined = combined[combined[COL_MAJORNUM] == PRIMARY_MAJOR_VALUE]
-
 Path("data").mkdir(exist_ok=True)
+combined = pd.concat(frames, ignore_index=True)
 combined.to_csv(COMBINED_OUT, index=False)
 print(f"Saved combined file → {COMBINED_OUT}")
 
 # =========================
-# 2) AGGREGATE: STUDENT COMPLETIONS
+# 2) AGGREGATE: TOTAL COMPLETIONS BY AWLEVELC + YEAR
 # =========================
 agg = (
-    combined.groupby([COL_CIP, COL_AWLEVEL, "YEAR"], as_index=False)
-            .agg(total_students_completed=(COL_TOTAL, "sum"))
+    combined.groupby([COL_AWLEVELC, "YEAR"], as_index=False)
+            .agg(total_completed=(COL_TOTAL_COMPLETIONS, "sum"))
 )
 
-years = list(range(2019, 2025))
-
+# =========================
+# 3) WIDE FORMAT (AWLEVELC rows, Years columns)
+# =========================
 wide = (
-    agg.pivot_table(index=[COL_CIP, COL_AWLEVEL], columns="YEAR",
-                    values="total_students_completed", aggfunc="sum")
-       .reindex(columns=years)
+    agg.pivot_table(index=[COL_AWLEVELC], columns="YEAR", values="total_completed", aggfunc="sum")
+       .reindex(columns=YEARS)
        .fillna(0)
        .reset_index()
 )
 
 # =========================
-# 3) YOY COUNTS & YOY %
+# 4) YOY COUNTS & YOY %
 # =========================
-for i in range(1, len(years)):
-    y_prev, y_cur = years[i-1], years[i]
-    wide[f"{y_cur}-{str(y_prev)[-2:]}"] = wide[y_cur] - wide[y_prev]
-    wide[f"{y_cur}-{str(y_prev)[-2:]}%"] = (
-        (wide[y_cur] - wide[y_prev]) / wide[y_prev].replace({0: pd.NA}) * 100
-    )
+for i in range(1, len(YEARS)):
+    y_prev, y_cur = YEARS[i - 1], YEARS[i]
+    diff_col = f"{str(y_cur)[-2:]}-{str(y_prev)[-2:]}"     # 20-19 style
+    pct_col = f"{diff_col}%"
 
-pct_cols = [c for c in wide.columns if c.endswith("%")]
+    wide[diff_col] = wide[y_cur] - wide[y_prev]
+    wide[pct_col] = (wide[diff_col] / wide[y_prev].replace({0: pd.NA})) * 100
+
+# Round % cols safely (column names are strings; years are ints)
+pct_cols = [c for c in wide.columns if isinstance(c, str) and c.endswith("%")]
 wide[pct_cols] = wide[pct_cols].round(2)
 
 # =========================
-# 4) FINAL OUTPUT STRUCTURE
+# 5) FINAL OUTPUT ORDER
 # =========================
-yoy_count_cols = [f"{years[i]}-{str(years[i-1])[-2:]}" for i in range(1, len(years))]
+yoy_count_cols = [f"{str(YEARS[i])[-2:]}-{str(YEARS[i-1])[-2:]}" for i in range(1, len(YEARS))]
 yoy_pct_cols = [c + "%" for c in yoy_count_cols]
 
-out = wide[
-    [COL_CIP, COL_AWLEVEL] +
-    years +
-    yoy_count_cols +
-    yoy_pct_cols
-]
+out = wide[[COL_AWLEVELC] + YEARS + yoy_count_cols + yoy_pct_cols]
 
 # =========================
-# 5) WRITE EXCEL WITH MERGED HEADERS
+# 6) WRITE EXCEL WITH MERGED HEADERS (LIKE YOUR FORMAT)
 # =========================
 with pd.ExcelWriter(OUT_XLSX, engine="openpyxl") as writer:
     out.to_excel(writer, sheet_name=SHEET_NAME, index=False, header=False, startrow=2)
@@ -126,36 +119,34 @@ center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 bold = Font(bold=True)
 
 r_top, r_sub = 1, 2
-total_cols = len(years)
+total_cols = len(YEARS)
 yoy_cols = len(yoy_count_cols)
 
 # Top headers
-ws.cell(r_top, 1, "CIP Code")
-ws.cell(r_top, 2, "AWLEVEL")
+ws.cell(r_top, 1, "AWLEVELC")
 
-ws.cell(r_top, 3, "Total Students Completed")
-ws.merge_cells(start_row=r_top, start_column=3, end_row=r_top, end_column=2 + total_cols)
+ws.cell(r_top, 2, "Total Completed")
+ws.merge_cells(start_row=r_top, start_column=2, end_row=r_top, end_column=1 + total_cols)
 
-ws.cell(r_top, 3 + total_cols, "Year over year Change count")
-ws.merge_cells(start_row=r_top, start_column=3 + total_cols,
-               end_row=r_top, end_column=2 + total_cols + yoy_cols)
+ws.cell(r_top, 2 + total_cols, "Year over year Change count")
+ws.merge_cells(start_row=r_top, start_column=2 + total_cols,
+               end_row=r_top, end_column=1 + total_cols + yoy_cols)
 
-ws.cell(r_top, 3 + total_cols + yoy_cols, "Year over year Change %")
-ws.merge_cells(start_row=r_top, start_column=3 + total_cols + yoy_cols,
-               end_row=r_top, end_column=2 + total_cols + 2*yoy_cols)
+ws.cell(r_top, 2 + total_cols + yoy_cols, "Year over year Change %")
+ws.merge_cells(start_row=r_top, start_column=2 + total_cols + yoy_cols,
+               end_row=r_top, end_column=1 + total_cols + 2 * yoy_cols)
 
-# Merge CIP & AWLEVEL vertically
+# Merge AWLEVELC vertically
 ws.merge_cells(start_row=r_top, start_column=1, end_row=r_sub, end_column=1)
-ws.merge_cells(start_row=r_top, start_column=2, end_row=r_sub, end_column=2)
 
 # Subheaders
-col = 3
-for y in years:
+col = 2
+for y in YEARS:
     ws.cell(r_sub, col, str(y)); col += 1
 for c in yoy_count_cols:
     ws.cell(r_sub, col, c); col += 1
 for c in yoy_pct_cols:
-    ws.cell(r_sub, col, c.replace("%","")); col += 1
+    ws.cell(r_sub, col, c.replace("%", "")); col += 1
 
 # Format headers
 for r in [r_top, r_sub]:
@@ -163,10 +154,11 @@ for r in [r_top, r_sub]:
         ws.cell(r, c).alignment = center
         ws.cell(r, c).font = bold
 
-ws.freeze_panes = "C3"
+ws.freeze_panes = "B3"
 
+# Column widths
 for c in range(1, col):
-    ws.column_dimensions[get_column_letter(c)].width = 12
+    ws.column_dimensions[get_column_letter(c)].width = 14
 
 wb.save(OUT_XLSX)
 print(f"Saved student YoY Excel → {OUT_XLSX}")

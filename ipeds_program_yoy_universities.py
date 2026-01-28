@@ -26,7 +26,7 @@ COL_TOTAL = "CTOTALT"
 KEEP_PRIMARY_MAJOR_ONLY = True
 PRIMARY_MAJOR_VALUE = 1
 
-COMBINED_OUT = "data/completions_2019_2024.csv"
+COMBINED_OUT = "data_uni/completions_2019_2024.csv"
 OUT_XLSX = "cip_awlevel_yoy_2019_2024.xlsx"
 SHEET_NAME = "YoY Summary"
 
@@ -88,8 +88,8 @@ for i in range(1, len(years)):
         (wide[y_cur] - wide[y_prev]) / wide[y_prev].replace({0: pd.NA}) * 100
     )
 
-pct_cols = [c for c in wide.columns if c.endswith("%")]
-wide[pct_cols] = wide[pct_cols].round(2)
+pct_cols = [c for c in wide.columns if isinstance(c, str) and c.endswith("%")]
+wide[pct_cols] = wide[pct_cols].apply(pd.to_numeric, errors="coerce").round(2)
 
 # =========================
 # 4) FINAL COLUMN ORDER
