@@ -1,3 +1,4 @@
+#%%
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -26,7 +27,7 @@ PRIMARY_MAJOR_VALUE = 1
 
 YEARS = list(range(2019, 2025))
 
-OUT_EXCEL = "ipeds_sunsetting_programs_2019_2024.xlsx"
+OUT_EXCEL = "data_uni/ipeds_sunsetting_programs_2019_2024.xlsx"
 OUT_COMBINED = "data_uni/completions_programs_2019_2024.csv"
 
 # "Sunsetting" thresholds (tune if needed)
@@ -224,3 +225,140 @@ with pd.ExcelWriter(OUT_EXCEL, engine="openpyxl") as writer:
 
 print(f"Saved outputs → {OUT_EXCEL}")
 print(f"Saved combined program file → {OUT_COMBINED}")
+
+#%%
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+# =========================
+# CONFIG
+# =========================
+IN_EXCEL = Path("data_uni/ipeds_sunsetting_programs_2019_2024.xlsx")  # output from your script
+OUT_DIR = Path("viz_sunsetting")
+OUT_DIR.mkdir(exist_ok=True)
+
+YEARS = [2019, 2020, 2021, 2022, 2023, 2024]
+
+COL_CIP = "CIPCODE"
+COL_AWLEVEL = "AWLEVEL"
+COL_UNITID = "UNITID"
+
+# =========================
+# LOAD OUTPUTS
+# =========================
+nat_all = pd.read_excel(IN_EXCEL, sheet_name="National_All")
+nat_sunset = pd.read_excel(IN_EXCEL, sheet_name="National_Sunsetting")
+uni_all = pd.read_excel(IN_EXCEL, sheet_name="Uni_All")
+uni_sunset = pd.read_excel(IN_EXCEL, sheet_name="Uni_Sunsetting")
+
+# Ensure numeric year columns
+for df in [nat_all, nat_sunset, uni_all, uni_sunset]:
+    for y in YEARS:
+        if y in df.columns:
+            df[y] = pd.to_numeric(df[y], errors="coerce").fillna(0)
+
+# =========================
+# 1) TOP NATIONAL DECLINERS (BAR)
+# =========================
+top_n = 20
+nat_sunset["label"] = nat_sunset[COL_CIP].astype(str) + " | " + nat_sunset[COL_AWLEVEL].astype(str)
+
+top_decliners = (
+    nat_sunset.sort_values("net_change_24_vs_19")  # most negative first
+             .head(top_n)
+             .copy()
+)
+
+plt.figure()
+plt.barh(top_decliners["label"], top_decliners["net_change_24_vs_19"])
+plt.title(f"Top {top_n} National Declines (Net change 2024 vs 2019)")
+plt.xlabel("Net Change in Completions (2024 - 2019)")
+plt.tight_layout()
+plt.savefig(OUT_DIR / "01_top_national_decliners_bar.png", dpi=200)
+plt.close()
+
+# =========================
+# 2) TRAJECTORY LINES FOR TOP DECLINERS
+# =========================
+# Pick 10 most negative and plot their year-by-year trend
+line_n = 10
+line_df = top_decliners.head(line_n)
+
+plt.figure()
+for _, row in line_df.iterrows():
+    yvals = [row[y] for y in YEARS]
+    plt.plot(YEARS, yvals, marker="o", label=row["label"])
+plt.title(f"Trajectories of Top {line_n} National Decliners (2019–2024)")
+plt.xlabel("Year")
+plt.ylabel("Completions")
+plt.legend(fontsize=7, loc="best")
+plt.tight_layout()
+plt.savefig(OUT_DIR / "02_top_decliners_trajectories.png", dpi=200)
+plt.close()
+
+# =========================
+# 3) HEATMAP OF YOY % FOR NATIONAL SUNSETTING
+# =========================
+# Collect YoY % cols like "20-19%" etc
+pct_cols = [c for c in nat_sunset.columns if isinstance(c, str) and c.endswith("%")]
+heat = nat_sunset.copy()
+heat["label"] = heat[COL_CIP].astype(str) + " | " + heat[COL_AWLEVEL].astype(str)
+
+# Keep top 30 most negative net change for readability
+heat = heat.sort_values("net_change_24_vs_19").head(30)
+heat_mat = heat[pct_cols].to_numpy(dtype=float)
+
+plt.figure()
+plt.imshow(heat_mat, aspect="auto")
+plt.yticks(range(len(heat)), heat["label"])
+plt.xticks(range(len(pct_cols)), pct_cols, rotation=45, ha="right")
+plt.title("YoY % Change Heatmap (Top 30 National Sunsetting Candidates)")
+plt.colorbar(label="YoY % Change")
+plt.tight_layout()
+plt.savefig(OUT_DIR / "03_yoy_pct_heatmap_top30.png", dpi=200)
+plt.close()
+
+# =========================
+# 4) SUPPLY vs AVAILABILITY SCATTER (2024)
+# =========================
+# Uses inst_2024 (institutions awarding in 2024) and 2024 completions
+if "inst_2024" in nat_all.columns:
+    plot_df = nat_all.copy()
+    plot_df["is_sunsetting"] = plot_df.get("sunsetting_candidate", False).astype(int)
+
+    plt.figure()
+    plt.scatter(plot_df["inst_2024"], plot_df[2024])
+    plt.title("2024 Completions vs Institutions Awarding (National)")
+    plt.xlabel("Institutions awarding in 2024 (inst_2024)")
+    plt.ylabel("Total completions in 2024")
+    plt.tight_layout()
+    plt.savefig(OUT_DIR / "04_supply_vs_availability_scatter_2024.png", dpi=200)
+    plt.close()
+
+# =========================
+# 5) UNIVERSITY RISK: COUNT SUNSETTING PROGRAMS PER UNITID
+# =========================
+uni_counts = (
+    uni_sunset.groupby(COL_UNITID, as_index=False)
+             .size()
+             .rename(columns={"size": "sunsetting_program_count"})
+             .sort_values("sunsetting_program_count", ascending=False)
+             .head(25)
+)
+
+plt.figure()
+plt.bar(uni_counts[COL_UNITID].astype(str), uni_counts["sunsetting_program_count"])
+plt.title("Top 25 Institutions by Count of Sunsetting Candidates")
+plt.xlabel("UNITID")
+plt.ylabel("# Sunsetting program candidates")
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.savefig(OUT_DIR / "05_top_institutions_sunsetting_counts.png", dpi=200)
+plt.close()
+
+print(f"Saved charts in: {OUT_DIR.resolve()}")
+
+
+# %%
