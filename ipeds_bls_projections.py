@@ -35,11 +35,11 @@ COL_MAJORNUM = "MAJORNUM"
 
 YEARS = list(range(2019, 2025))
 
-OUT_XLSX = "data_uni/cip_grouped_awlevel_yoy_students_2019_2024.xlsx"
-SCATTER_PATH = "data_uni/sunset_matrix_scatter.png"
-HEATMAP_PATH = "data_uni/sunset_matrix_heatmap.png"
-HIGHLIGHT_HEATMAP_PATH = "data_uni/sunset_matrix_heatmap_large_declining.png"
-BLS_EXCEL_PATH = "data_uni/bls_correlation_analysis.xlsx"
+OUT_XLSX = "data_ipeds_bls/cip_grouped_awlevel_yoy_students_2019_2024.xlsx"
+SCATTER_PATH = "data_ipeds_bls/sunset_matrix_scatter.png"
+HEATMAP_PATH = "data_ipeds_bls/sunset_matrix_heatmap.png"
+HIGHLIGHT_HEATMAP_PATH = "data_ipeds_bls/sunset_matrix_heatmap_large_declining.png"
+BLS_EXCEL_PATH = "data_ipeds_bls/bls_correlation_analysis.xlsx"
 
 # -------------------------
 # Cleanup controls
@@ -917,7 +917,7 @@ def _create_bls_visualizations(
     mismatches: pd.DataFrame,
     lag_analysis: pd.DataFrame,
 ):
-    out_dir = Path("data_uni")
+    out_dir = Path("data_ipeds_bls")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not cip_bls_corr.empty:
@@ -993,7 +993,7 @@ def _create_bls_visualizations(
 # MAIN
 # ============================================================
 def main():
-    Path("data_uni").mkdir(parents=True, exist_ok=True)
+    Path("data_ipeds_bls").mkdir(parents=True, exist_ok=True)
 
     frames = []
     print("[LOAD] Reading IPEDS A files...")
