@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPEDS-BLS Study — Meeting Explainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --card:     #1c2330;
+    --border:   #2d3748;
+    --accent:   #58a6ff;
+    --gold:     #e3b341;
+    --green:    #3fb950;
+    --red:      #f85149;
+    --amber:    #d29922;
+    --muted:    #8b949e;
+    --text:     #e6edf3;
+    --serif:    'DM Serif Display', Georgia, serif;
+    --sans:     'DM Sans', sans-serif;
+    --mono:     'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,17,23,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 2rem;
+    height: 54px;
+  }
+  .nav-title {
+    font-family: var(--serif);
+    font-size: 1rem;
+    color: var(--accent);
+    margin-right: auto;
+    letter-spacing: 0.01em;
+  }
+  .nav-tabs { display: flex; gap: 0; }
+  .nav-tab {
+    padding: 0 1.1rem;
+    height: 54px;
+    display: flex; align-items: center;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── LAYOUT ── */
+  main { margin-top: 54px; }
+  .section { display: none; padding: 3rem 2rem 4rem; max-width: 1100px; margin: 0 auto; }
+  .section.active { display: block; animation: fadeUp 0.35s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .section-title {
+    font-family: var(--serif);
+    font-size: 2.2rem;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+    line-height: 1.2;
+  }
+  .section-sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 2.5rem;
+    font-weight: 300;
+  }
+  h3 {
+    font-family: var(--serif);
+    font-size: 1.2rem;
+    font-weight: 400;
+    margin-bottom: 0.6rem;
+    color: var(--text);
+  }
+  p { color: #bdc5cd; margin-bottom: 0.8rem; font-size: 0.92rem; }
+  code {
+    font-family: var(--mono);
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.82rem;
+    color: var(--gold);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.2rem;
+  }
+  .card-accent { border-left: 3px solid var(--accent); }
+  .card-gold   { border-left: 3px solid var(--gold); }
+  .card-green  { border-left: 3px solid var(--green); }
+  .card-red    { border-left: 3px solid var(--red); }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; }
+  @media(max-width:720px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── STAT PILLS ── */
+  .stats-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
+  .stat-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1.3rem;
+    flex: 1 1 180px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 1.7rem;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .stat-lbl { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .c-accent { color: var(--accent); }
+  .c-gold   { color: var(--gold); }
+  .c-green  { color: var(--green); }
+  .c-red    { color: var(--red); }
+  .c-amber  { color: var(--amber); }
+  .c-muted  { color: var(--muted); }
+
+  /* ── PIPELINE FLOW ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .flow-step {
+    display: flex;
+    gap: 1.4rem;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 1.8rem;
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 44px;
+  }
+  .flow-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    border: 2px solid;
+  }
+  .flow-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background: var(--border);
+    margin-top: 6px;
+  }
+  .flow-body { flex: 1; padding-top: 8px; }
+  .flow-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-bottom: 0.4rem;
+  }
+  .flow-body h4 {
+    font-size: 0.97rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    color: var(--text);
+  }
+  .flow-body p { font-size: 0.87rem; margin-bottom: 0.4rem; }
+  .flow-code {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--gold);
+    margin-top: 0.6rem;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.6;
+  }
+
+  /* colours per step */
+  .s1 .flow-num { color: #58a6ff; border-color: #58a6ff; background: rgba(88,166,255,0.08); }
+  .s1 .flow-tag { background: rgba(88,166,255,0.15); color: #58a6ff; }
+  .s2 .flow-num { color: #e3b341; border-color: #e3b341; background: rgba(227,179,65,0.08); }
+  .s2 .flow-tag { background: rgba(227,179,65,0.15); color: #e3b341; }
+  .s3 .flow-num { color: #3fb950; border-color: #3fb950; background: rgba(63,185,80,0.08); }
+  .s3 .flow-tag { background: rgba(63,185,80,0.15); color: #3fb950; }
+  .s4 .flow-num { color: #bc8cff; border-color: #bc8cff; background: rgba(188,140,255,0.08); }
+  .s4 .flow-tag { background: rgba(188,140,255,0.15); color: #bc8cff; }
+  .s5 .flow-num { color: #f78166; border-color: #f78166; background: rgba(247,129,102,0.08); }
+  .s5 .flow-tag { background: rgba(247,129,102,0.15); color: #f78166; }
+
+  /* ── STAT METHOD CARDS ── */
+  .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  @media(max-width:700px) { .method-grid { grid-template-columns: 1fr; } }
+  .method-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.3rem 1.5rem;
+  }
+  .method-name {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+  .method-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text); }
+  .method-card p  { font-size: 0.86rem; color: #bdc5cd; margin-bottom: 0.5rem; }
+  .method-why { font-size: 0.82rem; color: var(--muted); font-style: italic; }
+  .value-row {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem;
+  }
+  .val-chip {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--gold);
+  }
+
+  /* ── INSIGHT CARDS ── */
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1.2rem;
+    align-items: flex-start;
+  }
+  .insight-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .insight-card h4 { font-size: 0.97rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .insight-card p  { font-size: 0.87rem; color: #bdc5cd; margin-bottom: 0; }
+  .badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 2px 9px;
+    border-radius: 20px;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+  .badge-red   { background: rgba(248,81,73,0.15);  color: var(--red);   }
+  .badge-amber { background: rgba(210,153,34,0.15); color: var(--amber); }
+  .badge-green { background: rgba(63,185,80,0.15);  color: var(--green); }
+
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 0.8rem; }
+  .data-table th {
+    background: #0d1117;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid rgba(45,55,72,0.5);
+    color: #bdc5cd;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  /* ── PHASE 2 ── */
+  .phase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  @media(max-width:700px) { .phase-grid { grid-template-columns: 1fr; } }
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.3rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .pc1::before { background: var(--accent); }
+  .pc2::before { background: var(--gold); }
+  .pc3::before { background: var(--green); }
+  .pc4::before { background: #bc8cff; }
+  .phase-num {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .phase-card h4 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .phase-card p  { font-size: 0.86rem; color: #bdc5cd; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-title">IPEDS-BLS Study</span>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="show('overview')">Overview</div>
+    <div class="nav-tab" onclick="show('flow')">Code Flow</div>
+    <div class="nav-tab" onclick="show('stats')">Statistical Methods</div>
+    <div class="nav-tab" onclick="show('insights')">Insights</div>
+    <div class="nav-tab" onclick="show('phase2')">Phase 2</div>
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════ OVERVIEW -->
+<section id="overview" class="section active">
+  <div class="section-title">What We Built and Why</div>
+  <div class="section-sub">A nationally-scoped, federally-sourced analytical pipeline connecting program supply to labor market demand</div>
+
+  <div class="stats-row">
+    <div class="stat-pill"><span class="stat-val c-accent">1.35M</span><span class="stat-lbl">IPEDS Records</span></div>
+    <div class="stat-pill"><span class="stat-val c-gold">345</span><span class="stat-lbl">CIP × Credential Combos</span></div>
+    <div class="stat-pill"><span class="stat-val c-green">6</span><span class="stat-lbl">Years of Data (2019-2024)</span></div>
+    <div class="stat-pill"><span class="stat-val c-amber">832</span><span class="stat-lbl">BLS SOC Occupations</span></div>
+    <div class="stat-pill"><span class="stat-val c-red">44</span><span class="stat-lbl">High / Moderate Risk Programs</span></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card card-accent">
+      <h3>The Core Question</h3>
+      <p>Are U.S. academic programs trending in the same direction as occupational demand — and critically, at the <em>right credential level?</em></p>
+      <p>Most prior research answers one side of this. We answered both simultaneously and linked them through a single reproducible pipeline using only federal public data.</p>
+    </div>
+    <div class="card card-gold">
+      <h3>Three Data Sources, One Pipeline</h3>
+      <p><strong style="color:var(--text)">IPEDS Completions Survey</strong> — what programs are producing graduates and how is that changing year over year.</p>
+      <p><strong style="color:var(--text)">BLS Employment Projections (2024-2034)</strong> — where occupational demand is headed over the next decade.</p>
+      <p><strong style="color:var(--text)">BLS OEWS National Files (2019-2024)</strong> — historical employment levels enabling lag analysis.</p>
+    </div>
+  </div>
+
+  <div class="card card-green" style="margin-top:0">
+    <h3>The Linking Layer: CIP-to-SOC Crosswalk</h3>
+    <p>Academic programs are classified by CIP codes. Occupations are classified by SOC codes. NCES maintains a many-to-many crosswalk between them. We used this to map 35 CIP2 fields to 740+ unique SOC occupations, enabling direct comparison of supply trends to demand signals at the field and credential level.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ CODE FLOW -->
+<section id="flow" class="section">
+  <div class="section-title">Code Flow</div>
+  <div class="section-sub">Five sequential stages from raw federal CSVs to classification, alignment, and visualisation outputs</div>
+
+  <div class="flow">
+
+    <div class="flow-step s1">
+      <div class="flow-left">
+        <div class="flow-num">01</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <span class="flow-tag">Data Ingestion</span>
+        <h4>Load and Filter IPEDS Files</h4>
+        <p>Six annual CSV files (c2019_a through c2024_a) are loaded. Records are filtered to primary majors only (<code>MAJORNUM = 1</code>) and sub-associate award levels (AWLEVEL 1-2) are removed. The completion count column <code>CTOTALT</code> is extracted.</p>
+        <p>Each row is aggregated by <code>CIP2</code> (first two digits of the 6-digit CIP code) and <code>AWLEVEL</code> per year, giving annual program-level headcounts.</p>
+        <div class="flow-code">extract_cip2_series(df[COL_CIP])   # "14.0901" → "14"
+df = df[df[COL_MAJORNUM] == PRIMARY_MAJOR_VALUE]
+grouped = df.groupby([CIP2, AWLEVEL, YEAR])[CTOTALT].sum()</div>
+      </div>
+    </div>
+
+    <div class="flow-step s2">
+      <div class="flow-left">
+        <div class="flow-num">02</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <span class="flow-tag">Feature Engineering</span>
+        <h4>Pivot to Wide Format and Compute Change Metrics</h4>
+        <p>Long-format data is pivoted so each row is one CIP2 × AWLEVEL combination with columns for each year. Three change metrics are derived per row:</p>
+        <p><strong style="color:var(--text)">Baseline average</strong> (2019-2021), <strong style="color:var(--text)">net percentage change</strong> (2019 to 2024), and <strong style="color:var(--text)">year-over-year percentage changes</strong> for each consecutive pair.</p>
+        <div class="flow-code">wide['baseline_avg'] = wide[[2019, 2020, 2021]].mean(axis=1)
+wide['net_pct_change'] = (
+    (wide[2024] - wide[2019]) / wide[2019].replace({0: np.nan})
+) * 100
+wide['consecutive_declines'] = count_consecutive_negatives(yoy_cols)</div>
+      </div>
+    </div>
+
+    <div class="flow-step s3">
+      <div class="flow-left">
+        <div class="flow-num">03</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <span class="flow-tag">Classification</span>
+        <h4>Apply Sunset Risk Labels</h4>
+        <p>Each CIP2 × AWLEVEL combination is scored on three independent metrics, then assigned a composite label. Thresholds are derived from the weighted, winsorized distribution of all net percentage changes — not fixed arbitrarily.</p>
+        <div class="flow-code">def apply_stat_threshold_labels(wide):
+    # Winsorize to [-100, 300] to remove extreme outliers
+    # Compute weighted mean (mu=1.66) and std (sigma=20.62)
+    # High Risk:  z <= -2.0  →  net_pct <= -39.58
+    # Moderate:   z <= -1.0  →  net_pct <= -18.96
+    ...
+    # Composite: 2+ High metrics → High Risk
+    #            1  High metric  → Moderate
+    #            0 High metrics  → Growth/Stable</div>
+      </div>
+    </div>
+
+    <div class="flow-step s4">
+      <div class="flow-left">
+        <div class="flow-num">04</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-body">
+        <span class="flow-tag">BLS Integration</span>
+        <h4>Fetch BLS Data and Run Four-Step Alignment Pipeline</h4>
+        <p>BLS occupational projection data is fetched live from the BLS HTML table. OEWS historical files are pulled by year. CIP2 fields are linked to SOC occupations via the crosswalk, then alignment is assessed through four sequential steps.</p>
+        <div class="flow-code">bls_df  = load_bls_employment_projections_html()   # 832 SOC rows
+oews_df = load_oews_national_files([2019..2024])   # ~1,300 rows/yr
+cip_soc = load_cip2_to_soc_map(crosswalk_path)     # many-to-many
+
+# Step 1 — CIP2-level Pearson + Spearman correlation
+# Step 2 — CIP2 x AWLEVEL Cohen's d degree-level alignment
+# Step 3 — WLS residual mismatch detection
+# Step 4 — Cross-lagged correlation at 0, 12, 24, 36 months</div>
+      </div>
+    </div>
+
+    <div class="flow-step s5">
+      <div class="flow-left">
+        <div class="flow-num">05</div>
+      </div>
+      <div class="flow-body">
+        <span class="flow-tag">Output</span>
+        <h4>Write Excel Workbook and Generate Visualisations</h4>
+        <p>All results are written to a structured Excel workbook with dedicated sheets: BLS projections, CIP2 correlation, CIP2 × AWLEVEL alignment, mismatch flags, lag analysis, and a dictionary tab. Scatter plots and heatmaps are saved as PNG files.</p>
+        <div class="flow-code">writer.sheets: Dictionary | BLS_Projections_Raw | CIP2_BLS
+               CIP2_AWLEVEL_BLS | Mismatches | Lag_Analysis | Viz
+_create_bls_visualizations(wide, bls_corr, cohens_d_df, lag_df)</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ STATS -->
+<section id="stats" class="section">
+  <div class="section-title">Statistical Methods</div>
+  <div class="section-sub">What each method is, why it was chosen, and the key values derived</div>
+
+  <div class="method-grid">
+
+    <div class="method-card">
+      <div class="method-name">Method 01</div>
+      <h4>Weighted Winsorization</h4>
+      <p><strong style="color:var(--text)">What:</strong> Clips extreme net percentage change values to a bounded range before computing distributional thresholds, then weights the distribution by program baseline size.</p>
+      <p><strong style="color:var(--text)">Why:</strong> A small number of programs (e.g. Precision Production at +641%) would otherwise distort the mean and standard deviation, making thresholds meaningless for the rest of the portfolio.</p>
+      <p class="method-why">How: Values outside [-100, 300] are replaced with the boundary value. Weighted mean and std are computed using 2019-2021 baseline completions as weights.</p>
+      <div class="value-row">
+        <span class="val-chip">mu = 1.66</span>
+        <span class="val-chip">sigma = 20.62</span>
+        <span class="val-chip">High Risk z &lt;= -2.0</span>
+        <span class="val-chip">net_pct &lt;= -39.58</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">Method 02</div>
+      <h4>Composite Three-Metric Risk Score</h4>
+      <p><strong style="color:var(--text)">What:</strong> Three independent binary metrics are evaluated per program-credential combination. High Risk = 2 or more metrics flagged; Moderate = 1; Low = none.</p>
+      <p><strong style="color:var(--text)">Why:</strong> No single metric reliably identifies structural decline. A program with a bad five-year trend but strong recent recovery is different from one declining on all three dimensions simultaneously.</p>
+      <p class="method-why">How: Metric 1 — net pct change (25th percentile cutoff = -15.6%). Metric 2 — 3+ consecutive YoY declines (p = 0.125 under null). Metric 3 — post-pandemic recovery 2022-2024.</p>
+      <div class="value-row">
+        <span class="val-chip">25th pctile = -15.6%</span>
+        <span class="val-chip">p(3 declines) = 0.125</span>
+        <span class="val-chip">Recovery threshold = -5%</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">Method 03</div>
+      <h4>Pearson and Spearman Correlation</h4>
+      <p><strong style="color:var(--text)">What:</strong> Pearson measures linear correlation between program net change and BLS occupational growth. Spearman measures rank-order correlation (robust to outliers).</p>
+      <p><strong style="color:var(--text)">Why:</strong> Running both together reveals whether any apparent relationship is driven by a few extreme programs (Pearson sensitive to outliers; Spearman is not).</p>
+      <p class="method-why">How: Applied at CIP2 level first, then at CIP2 × AWLEVEL level. Significance tested at p &lt; 0.05.</p>
+      <div class="value-row">
+        <span class="val-chip">Pearson r = -0.12</span>
+        <span class="val-chip">p = 0.497</span>
+        <span class="val-chip">Spearman rho = 0.13</span>
+        <span class="val-chip">p = 0.469</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">Method 04</div>
+      <h4>Cohen's d Effect Size</h4>
+      <p><strong style="color:var(--text)">What:</strong> Standardised measure of the gap between program net percentage change and BLS occupational growth at the matching credential level. Classifies alignment strength.</p>
+      <p><strong style="color:var(--text)">Why:</strong> Correlation tells you direction; Cohen's d tells you the magnitude of the gap in standardised units. A field can be positively correlated but still have a large supply-demand gap.</p>
+      <p class="method-why">How: d = |gap| / sqrt(mean(prog_var, bls_var)). Strong &lt;0.2, Moderate 0.2-0.5, Weak 0.5-0.8, Misaligned &gt;0.8.</p>
+      <div class="value-row">
+        <span class="val-chip">Eng. Bach. gap = -17.7pp</span>
+        <span class="val-chip">Pub. Admin gap = -22.4pp</span>
+        <span class="val-chip">Library Sci. d = 0.08 (Strong)</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">Method 05</div>
+      <h4>Weighted Least Squares (WLS) Residuals</h4>
+      <p><strong style="color:var(--text)">What:</strong> Regresses program net change on BLS occupational growth, weighting by baseline program size. Programs whose actual change is far from the model prediction are flagged as anomalies.</p>
+      <p><strong style="color:var(--text)">Why:</strong> OLS would treat a 10-student program the same as a 400,000-student program. WLS gives large programs proportionally more weight, so mismatch flags are meaningful at scale.</p>
+      <p class="method-why">How: Studentized residuals above ±1.25 flagged. R² = 0.007 confirms near-zero aggregate fit — the outliers are genuine anomalies, not noise around a trend.</p>
+      <div class="value-row">
+        <span class="val-chip">R² = 0.007</span>
+        <span class="val-chip">Threshold = ±1.25 std</span>
+        <span class="val-chip">Precision Prod. resid = 4.21</span>
+      </div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">Method 06</div>
+      <h4>Cross-Lagged Correlation</h4>
+      <p><strong style="color:var(--text)">What:</strong> Tests whether this year's program completion trends predict next year's (or the year after's) employment trends, at lags of 0, 12, 24, and 36 months.</p>
+      <p><strong style="color:var(--text)">Why:</strong> If the aggregate correlation is near zero today, it could be because institutions respond with a delay rather than because they are not responding at all. The lag analysis distinguishes these two scenarios.</p>
+      <p class="method-why">How: OEWS employment change and IPEDS YoY change are cross-correlated at each lag. Best lag selected by max |r|. Significance at p &lt; 0.05.</p>
+      <div class="value-row">
+        <span class="val-chip">Health: r=0.999 @ 24mo</span>
+        <span class="val-chip">Education: r=-0.96 @ 12mo*</span>
+        <span class="val-chip">Business: r=0.999 @ 24mo</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ INSIGHTS -->
+<section id="insights" class="section">
+  <div class="section-title">Insights and Why They Make Sense</div>
+  <div class="section-sub">What the data reveals and the real-world logic behind each finding</div>
+
+  <div class="insight-card">
+    <div class="insight-icon">📉</div>
+    <div>
+      <h4>The aggregate signal is silent — on purpose <span class="badge badge-amber">Expected</span></h4>
+      <p>Pearson r = -0.12 between national program trends and BLS demand sounds alarming but is actually informative. It means the supply-demand relationship cannot be read at the field level — you must look credential by credential. Aggregating across Associate, Bachelor's, and graduate completions within the same CIP field cancels out divergent signals, producing noise. This result motivates the entire credential-level disaggregation that follows.</p>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-icon">⚠️</div>
+    <div>
+      <h4>High-demand fields are shrinking at the Bachelor's level <span class="badge badge-red">Critical</span></h4>
+      <p>Engineering Bachelor's completions are down 8% while BLS projects +9.7% occupational growth — a 17.7 percentage point gap. Public Administration is down 16% against +6.2% demand. Health Professions and Business show similar patterns. This is not a demand problem; it is a supply problem driven by the enrollment cliff and pandemic-era attrition concentrated in programs with longer time-to-degree requirements.</p>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-icon">🔴</div>
+    <div>
+      <h4>Associate-level risk is structural, not cyclical <span class="badge badge-red">High Risk</span></h4>
+      <p>44 of 345 combinations carry Moderate or High sunset risk, concentrated at the Associate level in Liberal Arts, Library Sciences, Philosophy, Foreign Languages, and Communications Technology. These programs score High Risk on multiple metrics simultaneously — not just declining enrollment, but consecutive annual declines and failed post-pandemic recovery. That combination indicates structural disengagement rather than a temporary enrollment dip.</p>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-icon">📈</div>
+    <div>
+      <h4>Over-supply anomalies defy the national trend <span class="badge badge-amber">Anomaly</span></h4>
+      <p>Precision Production grew 641% in completions against a -3.5% BLS demand outlook — a studentized residual of 4.21, the largest in the dataset. Construction Trades and Transportation also grew 330-350% against modest demand. These are likely driven by short-cycle certificate programs responding to regional demand signals not fully captured in national BLS projections, but they warrant monitoring for saturation risk.</p>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-icon">⏱️</div>
+    <div>
+      <h4>Institutions do respond — just slowly <span class="badge badge-green">Responsive</span></h4>
+      <p>Health Professions and Business both show near-perfect cross-lagged correlation (r = 0.999) at a 24-month lag. Education responds at 12 months (the only statistically significant result in the lag analysis, p = 0.041). This tells us that the system is not broken — it responds to labor market signals — but it operates on a 1-2 academic planning cycle delay. Public Administration is the exception, showing weak delayed response despite a large and growing demand gap.</p>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-icon">🎓</div>
+    <div>
+      <h4>The credential level is the key variable <span class="badge badge-green">Core Finding</span></h4>
+      <p>The same CIP field can show completely different risk profiles depending on credential level. Engineering at the Bachelor's level is misaligned (declining supply, growing demand). Engineering at the graduate level is stable. Library Sciences at the Associate level is Low Risk; at the graduate level it is High Risk. This means any policy response or program review that operates at the field level alone will draw the wrong conclusions. Credential-level disaggregation is not a refinement — it is the essential unit of analysis.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════ PHASE 2 -->
+<section id="phase2" class="section">
+  <div class="section-title">Phase 2 — Where This Goes Next</div>
+  <div class="section-sub">The same pipeline, extended across new dimensions using existing federal data sources</div>
+
+  <div class="card" style="margin-bottom:2rem; background: rgba(88,166,255,0.05); border-color: rgba(88,166,255,0.3);">
+    <p style="color:var(--text); font-size:0.92rem;">The infrastructure is already built. Phase 2 does not require new methodology — it applies the same pipeline to data that exists at finer levels of resolution. Each extension below is a natural second paper.</p>
+  </div>
+
+  <div class="phase-grid">
+
+    <div class="phase-card pc1">
+      <div class="phase-num">Extension 01</div>
+      <h4>State-Level Disaggregation</h4>
+      <p>Replace national OEWS files with state-specific OEWS data. Run the full pipeline for all 50 states, producing a CIP × credential alignment profile per state. A healthcare-heavy state and a manufacturing-heavy state will show very different risk signatures. This generates 50 built-in case studies from a single methodological extension.</p>
+    </div>
+
+    <div class="phase-card pc2">
+      <div class="phase-num">Extension 02</div>
+      <h4>Institution-Level Analysis</h4>
+      <p>IPEDS unit-record data includes institution identifiers. Disaggregating to the institution level identifies which specific colleges are the primary drivers of national over- and under-supply patterns. This moves the work from descriptive to prescriptive and has direct application for accreditation review and state system planning.</p>
+    </div>
+
+    <div class="phase-card pc3">
+      <div class="phase-num">Extension 03</div>
+      <h4>Demographic Disaggregation</h4>
+      <p>IPEDS completions data includes breakdowns by gender, race/ethnicity, and age group. Layering these dimensions in reveals whether labor market misalignment falls disproportionately on specific student populations — a dimension with significant equity relevance and high value for policy-focused journals.</p>
+    </div>
+
+    <div class="phase-card pc4">
+      <div class="phase-num">Extension 04</div>
+      <h4>Earnings Integration</h4>
+      <p>Adding College Scorecard median earnings data by field and credential shifts the demand signal from occupational headcounts to actual graduate wage outcomes. This substantially strengthens the alignment scoring and enables a richer Phase 2 composite index combining BLS projections, employment rates, and earnings trajectories.</p>
+    </div>
+
+  </div>
+
+  <hr class="divider"/>
+
+  <h3>Same Sources, Different Granularity</h3>
+  <table class="data-table" style="margin-top:1rem;">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Phase 1 (Current)</th>
+        <th>Phase 2 Extension</th>
+        <th>Data Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Geography</td><td>National</td><td>State / Regional</td><td>State OEWS files</td></tr>
+      <tr><td>Institution</td><td>Aggregate all</td><td>Individual colleges</td><td>IPEDS unit-record</td></tr>
+      <tr><td>Demographics</td><td>Total completions</td><td>Gender / Race / Age</td><td>IPEDS by-group files</td></tr>
+      <tr><td>Demand signal</td><td>Occupational headcount</td><td>Graduate earnings</td><td>College Scorecard</td></tr>
+      <tr><td>Time window</td><td>6 years (2019-2024)</td><td>10 years as data grows</td><td>IPEDS annual releases</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const tabs = ['overview','flow','stats','insights','phase2'];
+  document.querySelectorAll('.nav-tab')[tabs.indexOf(id)].classList.add('active');
+}
+</script>
+</body>
+</html>
