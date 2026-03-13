@@ -325,24 +325,6 @@ Microsoft Copilot was used to assist with **code cleanup and inline comment gene
 
 ---
 
-## Citation
-
-If you use this pipeline or build on this work, please cite:
-
-```bibtex
-@misc{bangad2025ipeds,
-  author       = {Bangad, Purva and [Author Name 2] and [Author Name 3] and [Author Name 4]},
-  title        = {Mapping the Divergence: A Longitudinal Analysis of U.S. Higher Education
-                  Program Sunset Risk and Labor Market Alignment Using IPEDS Completions
-                  Data and BLS Occupational Projections (2019-2024)},
-  year         = {2025},
-  institution  = {Institutional Research Division},
-  url          = {https://github.com/bangadpurva/IPEDS_sunsetting}
-}
-```
-
----
-
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
