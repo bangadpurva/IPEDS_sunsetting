@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 import warnings
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Union, Optional
 
@@ -431,14 +432,6 @@ def load_bls_employment_projections_html() -> pd.DataFrame:
         raise ValueError("Could not identify the occupational projections table from HTML.")
 
     return _normalize_projection_columns(chosen)
-
-
-import io
-import re
-import zipfile
-import requests
-import numpy as np
-import pandas as pd
 
 
 def load_oews_national_files(years: List[int]) -> pd.DataFrame:
