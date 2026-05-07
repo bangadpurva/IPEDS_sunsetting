@@ -78,10 +78,20 @@ BLS Employment Projections data is fetched live from the BLS website at runtime.
 
 ## Repository Structure
 
+The repository is now organized around two layers:
+
+- `ipeds_bls_projections.py` remains the canonical research-paper pipeline.
+- `app/` and `web/` provide a student-facing pathway advisor that reads the pipeline outputs.
+
+See [`docs/STRUCTURE.md`](docs/STRUCTURE.md) for the restructuring map and deployment path.
+
 ```
 IPEDS_sunsetting/
 │
 ├── ipeds_bls_projections.py        # Main pipeline script
+├── app/                            # Student advisor data/API layer
+├── web/                            # Static frontend
+├── docs/STRUCTURE.md               # Current structure and deployable flow
 │
 ├── data_uni/                       # IPEDS annual CSV files (download separately)
 │   ├── c2019_a.csv
@@ -273,6 +283,27 @@ python ipeds_bls_projections.py
 ```
 
 BLS Employment Projections and OEWS data are fetched automatically at runtime. An active internet connection is required.
+
+### 4. Build and Run the Student App
+
+```bash
+python3 app/build_student_data.py
+python3 -m app.ipeds_connect.server
+```
+
+Open `http://127.0.0.1:8000` to use the interactive student pathway advisor. The app reads the generated research workbooks and creates `web/data/programs.json` for a static or API-backed deployment.
+
+To make the UI rebuild directly from the research pipeline:
+
+```bash
+python3 app/build_student_data.py --run-research
+```
+
+The local app also exposes `/api/refresh?run=1`, which runs `ipeds_bls_projections.py` before rebuilding the student-facing dataset.
+
+### Optional LLM Coach
+
+The AI Coach works without an LLM by using local rules and the IPEDS/BLS dataset. The recommended free LLM setup is local Ollama with `qwen2.5:7b`, which has no token billing and keeps prompts local. See [`docs/LLM_COACH.md`](docs/LLM_COACH.md).
 
 ---
 
