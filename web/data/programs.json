@@ -8,8 +8,8 @@
     "source_bls_workbook": "data_uni/bls_correlation_analysis.xlsx",
     "using_fallback_outputs": true,
     "freshness": {
-      "data_uni/cip_grouped_awlevel_yoy_students_2019_2024.xlsx": 1772821331398865450,
-      "data_uni/bls_correlation_analysis.xlsx": 1772821331394719874
+      "data_uni/cip_grouped_awlevel_yoy_students_2019_2024.xlsx": "2026-03-06T18:22:11.398865+00:00",
+      "data_uni/bls_correlation_analysis.xlsx": "2026-03-06T18:22:11.394720+00:00"
     }
   },
   "research": {

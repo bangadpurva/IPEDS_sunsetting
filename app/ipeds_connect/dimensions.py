@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .research_engine import ROOT, load_research_module
+from .scorecard import load_scorecard_cache
 
 GENDER_COLUMNS = {
     "men": "CTOTALM",
@@ -190,6 +191,16 @@ def build_dimensions_dataset() -> dict:
     institution_trends = _institution_trends(a_files, directory)
     demographics = _demographics(a_files)
     has_geography = "state" in institution_trends.columns and institution_trends["state"].notna().any()
+    scorecard = load_scorecard_cache()
+    scorecard_rows = pd.DataFrame(scorecard.get("institutions", []))
+    if not scorecard_rows.empty:
+        scorecard_rows["UNITID"] = scorecard_rows["unitid"].astype(str)
+        directory = directory.merge(scorecard_rows.drop(columns=["unitid"]), on="UNITID", how="left")
+        institution_trends = institution_trends.merge(
+            scorecard_rows.drop(columns=["unitid"]), on="UNITID", how="left"
+        )
+
+    institutions = directory.drop_duplicates(subset=["UNITID"]) if not directory.empty else directory
 
     return {
         "summary": {
@@ -198,6 +209,8 @@ def build_dimensions_dataset() -> dict:
             "institutions": int(a_files["UNITID"].nunique()),
             "program_rows_ranked": int(len(institution_trends)),
             "has_institution_directory": bool(has_geography),
+            "has_scorecard": bool(not scorecard_rows.empty),
+            "scorecard_retrieved_at": scorecard.get("retrieved_at"),
             "geography_note": (
                 "Institution names/geography loaded from IPEDS directory file."
                 if has_geography
@@ -205,6 +218,7 @@ def build_dimensions_dataset() -> dict:
             ),
         },
         "institution_trends": _records(institution_trends),
+        "institutions": _records(institutions),
         "demographics": demographics,
         "dictionary": {
             "UNITID": "IPEDS institution identifier. Join to HD directory files for name/geography.",

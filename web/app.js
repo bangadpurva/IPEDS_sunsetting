@@ -16,6 +16,7 @@ let backendAvailable = true;
 let runPollTimer = null;
 let agentRecommendations = null;
 let serverMode = location.protocol !== "file:";
+let coachSessionId = null;
 
 const fmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 
@@ -77,6 +78,11 @@ function pct(value) {
   return n === null ? "n/a" : `${n > 0 ? "+" : ""}${fmt.format(n)}%`;
 }
 
+function money(value) {
+  const n = number(value);
+  return n === null ? "n/a" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -108,6 +114,19 @@ function riskClass(label) {
   if (label === "Moderate") return "risk-moderate";
   if (label === "Growth/Stable") return "risk-stable";
   return "";
+}
+
+function degreeMatches(program, degree) {
+  if (!degree) return true;
+  const award = String(program.awlevel_name || "").toLowerCase();
+  const aliases = {
+    associate: ["associate"],
+    bachelor: ["bachelor's degree", "bachelors degree"],
+    master: ["master"],
+    doctoral: ["doctor", "professional degree"],
+    certificate: ["certificate", "award <"],
+  };
+  return (aliases[degree] || [degree]).some((term) => award.includes(term));
 }
 
 function scoreProgram(program) {
@@ -237,6 +256,7 @@ function filteredPrograms() {
   const alignment = document.querySelector("#alignmentFilter").value;
 
   return dataset.programs
+    .filter((p) => degreeMatches(p, document.querySelector("#degreeSelect").value))
     .filter((p) => programMatchesSearch(p, search))
     .filter((p) => !label || p.sunset_label === label)
     .filter((p) => !alignment || p.alignment === alignment)
@@ -252,6 +272,7 @@ async function renderPrograms() {
   const label = document.querySelector("#labelFilter").value;
   const alignment = document.querySelector("#alignmentFilter").value;
   const programs = basePrograms
+    .filter((p) => degreeMatches(p, document.querySelector("#degreeSelect").value))
     .filter((p) => programMatchesSearch(p, search))
     .filter((p) => !label || p.sunset_label === label)
     .filter((p) => !alignment || p.alignment === alignment)
@@ -348,12 +369,12 @@ function showCoachLoading() {
   document.querySelector("#askAdvisor").textContent = "Thinking...";
 }
 
-function showCoachResult({ mode, answer, profile, reasoning }) {
+function showCoachResult({ mode, answer, profile, reasoning, nextQuestion }) {
   document.querySelector("#coachResult").classList.remove("hidden");
   document.querySelector("#coachMode").textContent = mode === "llm" ? "Local LLM Coach" : "Rules Coach";
   document.querySelector("#coachResultTitle").textContent = "Coach recommendation";
   document.querySelector("#coachStatus").textContent = "Done";
-  document.querySelector("#coachAnswer").innerHTML = `<p>${formatCoachMarkdown(answer)}</p>`;
+  document.querySelector("#coachAnswer").innerHTML = `<p>${formatCoachMarkdown(answer)}</p>${nextQuestion ? `<p class="coach-next"><b>Next:</b> ${escapeHtml(nextQuestion)}</p>` : ""}`;
   const interpreted = profile
     ? `Interpreted as: ${(profile.interests || []).join(", ")}${profile.degree_level ? ` · ${profile.degree_level}` : ""}.`
     : "";
@@ -372,8 +393,24 @@ function showCoachJobs(jobs) {
     <div class="coach-job">
       <b>${escapeHtml(job.title)}</b>
       <span>${escapeHtml(job.related_field || "")}${job.projected_growth !== null ? ` · ${pct(job.projected_growth)} growth` : ""}${job.annual_openings !== null ? ` · ${fmt.format(number(job.annual_openings) ?? 0)} openings` : ""}</span>
+      ${(job.skills || []).length ? `<span>Skills: ${(job.skills || []).slice(0, 4).map(escapeHtml).join(", ")}</span>` : ""}
     </div>
   `).join("")}`;
+  document.querySelector("#coachAnswer").appendChild(wrap);
+}
+
+function showCoachInstitutions(institutions) {
+  if (!institutions || !institutions.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "coach-jobs";
+  wrap.innerHTML = `
+    <div class="coach-jobs-title">Institutions matching your available location and cost constraints</div>
+    ${institutions.slice(0, 6).map((school) => `
+      <div class="coach-job">
+        <b>${escapeHtml(school.institution_name || school.scorecard_name || `UNITID ${school.unitid}`)}</b>
+        <span>${escapeHtml([school.city || school.scorecard_city, school.state || school.scorecard_state].filter(Boolean).join(", "))}${school.average_net_price !== null && school.average_net_price !== undefined ? ` · ${money(school.average_net_price)} avg. net price` : ""}${school.completion_rate !== null && school.completion_rate !== undefined ? ` · ${pct(number(school.completion_rate) * 100)} completion` : ""}</span>
+      </div>
+    `).join("")}`;
   document.querySelector("#coachAnswer").appendChild(wrap);
 }
 
@@ -391,17 +428,25 @@ async function askAdvisor() {
 
   try {
     if (!serverMode) throw new Error("Server unavailable in file mode");
-    const response = await fetch(`/api/agent?prompt=${encodeURIComponent(prompt)}`, { cache: "no-store" });
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, session_id: coachSessionId }),
+    });
     if (response.ok) {
       const payload = await response.json();
+      coachSessionId = payload.session_id || coachSessionId;
       agentRecommendations = payload.recommendations;
       showCoachResult({
         mode: payload.mode,
         answer: payload.coach_answer || payload.reasoning[0],
         profile: payload.profile,
         reasoning: payload.reasoning,
+        nextQuestion: payload.next_question,
       });
       showCoachJobs(payload.job_designations);
+      showCoachInstitutions(payload.institutions);
       await renderPrograms();
       return;
     }
@@ -410,6 +455,7 @@ async function askAdvisor() {
   }
 
   agentRecommendations = dataset.programs
+    .filter((program) => degreeMatches(program, parsed.degree))
     .map((program) => ({ ...program, advisor_score: scoreProgram(program) }))
     .sort((a, b) => b.advisor_score - a.advisor_score)
     .slice(0, 12);
@@ -430,6 +476,19 @@ async function loadData() {
   dataset = await response.json();
   const dimensionsResponse = await fetch("data/dimensions.json", { cache: "no-store" });
   dimensions = await dimensionsResponse.json();
+  if (serverMode) {
+    try {
+      const capabilities = await fetch("/api/capabilities", { cache: "no-store" }).then((response) => response.json());
+      document.querySelector("#refreshData").disabled = !capabilities.admin;
+      document.querySelector("#runResearch").disabled = !capabilities.admin;
+      if (!capabilities.admin) {
+        document.querySelector("#refreshData").title = "Administrative data refresh is disabled on this deployment";
+        document.querySelector("#runResearch").title = "Administrative research execution is disabled on this deployment";
+      }
+    } catch {
+      // Static hosting has no capabilities endpoint.
+    }
+  }
   renderSummary();
   renderResearchStrip();
   renderPrograms();
@@ -483,6 +542,11 @@ function renderDimensions() {
   document.querySelector("#dimensionSummary").textContent =
     `${summary.institutions ?? 0} institutions; ${summary.geography_note ?? "geography pending"}`;
   document.querySelector("#institutionGeoNote").textContent = summary.geography_note ?? "";
+  if (summary.has_scorecard) {
+    document.querySelector("#institutionGeoNote").textContent += ` College Scorecard outcomes cached ${summary.scorecard_retrieved_at || "date unavailable"}.`;
+  } else {
+    document.querySelector("#institutionGeoNote").textContent += " Add a free College Scorecard API key and run the cache command to include price and outcomes.";
+  }
   populateDimensionFilters();
   renderInstitutionTrends();
   renderGenderMix();
@@ -516,11 +580,14 @@ function renderInstitutionTrends() {
   const query = document.querySelector("#institutionSearch").value.toLowerCase();
   const state = document.querySelector("#stateFilter").value;
   const field = document.querySelector("#institutionFieldFilter").value;
+  const maxCostValue = document.querySelector("#institutionCostFilter").value;
+  const maxCost = maxCostValue ? number(maxCostValue) : null;
   const rows = (dimensions.institution_trends || [])
     .filter((row) => row.trend_direction === direction)
     .filter((row) => !query || `${row.institution_name || ""} ${row.unitid}`.toLowerCase().includes(query))
     .filter((row) => !state || row.state === state)
     .filter((row) => !field || row.cip2_name === field)
+    .filter((row) => maxCost === null || (number(row.average_net_price) !== null && number(row.average_net_price) <= maxCost))
     .slice(0, 10);
   document.querySelector("#institutionTrends").innerHTML = rows
     .map((row) => `
@@ -528,6 +595,7 @@ function renderInstitutionTrends() {
         <div>
           <b>${row.institution_name || `UNITID ${row.unitid}`}</b>
           <span>${[row.city, row.state].filter(Boolean).join(", ") || "Institution name/geography pending"} · ${row.cip2_name} / ${row.awlevel_name}</span>
+          ${row.average_net_price !== null && row.average_net_price !== undefined ? `<span>Scorecard: ${money(row.average_net_price)} avg. net price · ${pct((number(row.completion_rate) ?? 0) * 100)} completion · ${money(row.median_earnings_10yr)} median earnings</span>` : ""}
         </div>
         <div><b>${fmt.format(number(row.change_2019_2024) ?? 0)}</b><span>change</span></div>
         <div><b>${pct(row.pct_change_2019_2024)}</b><span>2019-24</span></div>
@@ -694,6 +762,7 @@ document.querySelector("#trendDirection").addEventListener("input", renderInstit
 document.querySelector("#institutionSearch").addEventListener("input", renderInstitutionTrends);
 document.querySelector("#stateFilter").addEventListener("input", renderInstitutionTrends);
 document.querySelector("#institutionFieldFilter").addEventListener("input", renderInstitutionTrends);
+document.querySelector("#institutionCostFilter").addEventListener("input", renderInstitutionTrends);
 document.querySelector("#demographicType").addEventListener("input", renderGenderMix);
 document.querySelector("#demographicFieldFilter").addEventListener("input", renderGenderMix);
 document.querySelector("#demographicAwardFilter").addEventListener("input", renderGenderMix);

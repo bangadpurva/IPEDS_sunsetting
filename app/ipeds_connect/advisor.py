@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -10,6 +11,8 @@ class StudentProfile:
     degree_level: str | None = None
     risk_tolerance: str = "balanced"
     career_priority: str = "balanced"
+    location: str | None = None
+    max_annual_cost: int | None = None
 
 
 INTEREST_TO_CIP_KEYWORDS = {
@@ -84,6 +87,32 @@ PROMPT_TO_CIP_BOOST = {
     "finance": ("Business",),
     "accounting": ("Business",),
 }
+
+JOB_INTEREST_KEYWORDS = {
+    "technology": ("computer", "software", "data", "database", "cyber", "information systems", "web developer"),
+    "healthcare": ("health", "medical", "nurs", "clinical", "physician", "therap", "dental", "pharmac"),
+    "business": ("business", "management", "manager", "account", "financial", "marketing", "sales", "analyst"),
+    "education": ("teacher", "education", "instruction", "school", "postsecondary"),
+    "public-service": ("public", "social", "community", "law enforcement", "emergency", "government"),
+    "creative": ("artist", "design", "media", "writer", "editor", "music", "film", "communication"),
+    "science": ("scientist", "science", "research", "statistic", "biological", "chemist", "physic"),
+    "trades": ("construction", "mechanic", "repair", "electric", "machin", "transport", "installer"),
+}
+
+
+def degree_matches(program: dict, degree_level: str | None) -> bool:
+    """Treat an explicitly requested credential as a constraint, not a score hint."""
+    if not degree_level:
+        return True
+    award = str(program.get("awlevel_name", "")).lower()
+    aliases = {
+        "associate": ("associate",),
+        "bachelor": ("bachelor's degree", "bachelors degree"),
+        "master": ("master",),
+        "doctoral": ("doctor", "professional degree"),
+        "certificate": ("certificate", "award <"),
+    }
+    return any(token in award for token in aliases.get(degree_level.lower(), (degree_level.lower(),)))
 
 
 def _text_match_score(program: dict, interests: Iterable[str]) -> float:
@@ -173,6 +202,8 @@ def _job_relevance_score(job: dict, prompt: str) -> float:
 def recommend(programs: list[dict], profile: StudentProfile, limit: int = 8) -> list[dict]:
     ranked = []
     for program in programs:
+        if not degree_matches(program, profile.degree_level):
+            continue
         item = dict(program)
         item["advisor_score"] = score_program(item, profile)
         item["advisor_reason"] = advisor_reason(item)
@@ -225,7 +256,23 @@ def profile_from_prompt(prompt: str) -> tuple[StudentProfile, list[str]]:
         interests = ["technology", "business", "healthcare"]
         reasons.append("No specific field detected, so started with broad high-demand areas.")
 
-    return StudentProfile(tuple(interests), degree, risk, priority), reasons
+    location = None
+    location_match = re.search(
+        r"(?:near|around)\s+([A-Za-z][A-Za-z .'-]+?)(?:[,.]|\s+(?:with|for|and|that|where|under|max|budget)\b|$)",
+        prompt,
+        flags=re.IGNORECASE,
+    )
+    if location_match:
+        location = location_match.group(1).strip()
+        reasons.append(f"Detected location preference '{location}'.")
+
+    max_annual_cost = None
+    budget_match = re.search(r"(?:under|max(?:imum)?|budget(?: of)?)\s*\$?([\d,]+)", text)
+    if budget_match:
+        max_annual_cost = int(budget_match.group(1).replace(",", ""))
+        reasons.append(f"Detected annual cost ceiling ${max_annual_cost:,}.")
+
+    return StudentProfile(tuple(interests), degree, risk, priority, location, max_annual_cost), reasons
 
 
 def _intent_from_prompt(prompt: str) -> str:
@@ -259,6 +306,8 @@ def agentic_recommend(programs: list[dict], prompt: str, limit: int = 8) -> dict
 
     ranked = []
     for program in programs:
+        if not degree_matches(program, profile.degree_level):
+            continue
         item = dict(program)
         score = score_program(item, profile)
         name = str(item.get("cip2_name", ""))
@@ -274,9 +323,16 @@ def agentic_recommend(programs: list[dict], prompt: str, limit: int = 8) -> dict
 
     job_candidates: list[dict] = []
     seen_jobs: set[str] = set()
+    explicit_interests = set(profile.interests)
     for program in selected:
         for job in program.get("job_designations", []) or []:
             title = str(job.get("title", "")).strip()
+            title_lower = title.lower()
+            recognized_domains = {
+                domain for domain, keywords in JOB_INTEREST_KEYWORDS.items() if any(keyword in title_lower for keyword in keywords)
+            }
+            if explicit_interests and recognized_domains and not (recognized_domains & explicit_interests):
+                continue
             if title and title not in seen_jobs:
                 seen_jobs.add(title)
                 job_candidates.append(
@@ -304,6 +360,8 @@ def agentic_recommend(programs: list[dict], prompt: str, limit: int = 8) -> dict
             "degree_level": profile.degree_level,
             "risk_tolerance": profile.risk_tolerance,
             "career_priority": profile.career_priority,
+            "location": profile.location,
+            "max_annual_cost": profile.max_annual_cost,
         },
         "reasoning": [intent_copy[intent], *reasons],
         "recommendations": selected,

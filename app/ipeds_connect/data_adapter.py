@@ -6,6 +6,7 @@ from typing import Any
 
 import pandas as pd
 
+from .onet import load_onet_cache, onet_soc
 from .research_engine import (
     ROOT,
     load_research_module,
@@ -57,11 +58,12 @@ def _occupation_designations(bls_path: Path) -> dict[str, list[dict]]:
     merged = merged.dropna(subset=["SOC_Title"])
     merged = merged[~merged["SOC_Title"].astype(str).str.lower().str.contains("all occupations|occupations$", na=False)]
 
+    onet_occupations = load_onet_cache().get("occupations", {})
     designations: dict[str, list[dict]] = {}
     for cip2, group in merged.groupby("CIP2"):
         sort_col = "BLS_Annual_Openings" if "BLS_Annual_Openings" in group.columns else "BLS_Projected_Pct_Change"
         top = group.sort_values(sort_col, ascending=False).head(8)
-        designations[str(cip2).zfill(2)] = _records(
+        records = _records(
             top.rename(
                 columns={
                     "SOC": "soc",
@@ -73,6 +75,9 @@ def _occupation_designations(bls_path: Path) -> dict[str, list[dict]]:
                 }
             )[["soc", "title", "projected_growth", "annual_openings", "median_wage", "typical_education"]]
         )
+        for record in records:
+            record.update(onet_occupations.get(onet_soc(record.get("soc", "")), {}))
+        designations[str(cip2).zfill(2)] = records
     return designations
 
 

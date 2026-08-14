@@ -85,6 +85,19 @@ main {
   padding: 28px clamp(18px, 4vw, 56px) 56px;
 }
 
+.site-footer {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.site-footer p + p {
+  margin-top: 8px;
+}
+
 .runtime-warning {
   border: 1px solid #e5c06b;
   border-radius: 8px;
@@ -228,6 +241,13 @@ textarea {
   margin-top: 10px;
   color: var(--muted);
   font-size: 0.84rem;
+}
+
+.coach-next {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--teal);
+  background: #e7f3f0;
 }
 
 .coach-header {

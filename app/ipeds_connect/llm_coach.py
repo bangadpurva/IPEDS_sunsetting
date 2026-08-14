@@ -79,9 +79,37 @@ def _job_context(jobs: list[dict[str, Any]]) -> str:
                 "annual_openings": job.get("annual_openings"),
                 "median_wage": job.get("median_wage"),
                 "typical_education": job.get("typical_education"),
+                "skills": job.get("skills", [])[:5],
+                "technology": job.get("technology", [])[:5],
             }
         )
     return json.dumps(rows, indent=2)
+
+
+def _rules_answer(base: dict[str, Any]) -> str:
+    recommendations = base.get("recommendations", [])
+    if not recommendations:
+        return "I could not find a pathway matching all of those constraints. Try broadening the credential or field."
+    top = recommendations[:3]
+    names = ", ".join(f"{row.get('cip2_name')} ({row.get('awlevel_name')})" for row in top)
+    first = top[0]
+    return (
+        f"Best-fit paths to compare: {names}.\n\n"
+        f"The leading option is {first.get('cip2_name')} because its grounded advisor score is "
+        f"{first.get('advisor_score')}/100. It has a {first.get('sunset_label', 'not available')} program trend "
+        f"and {first.get('alignment', 'insufficient')} labor-market alignment. "
+        "Use this as a shortlist, then compare cost, location, admissions fit, and student outcomes."
+    )
+
+
+def _next_question(profile: dict[str, Any]) -> str | None:
+    if not profile.get("degree_level"):
+        return "What credential are you considering: certificate, associate, bachelor's, master's, or doctoral?"
+    if not profile.get("location"):
+        return "Where do you want to study, or are you open to anywhere in the United States?"
+    if not profile.get("max_annual_cost"):
+        return "Do you have a maximum annual college cost or net-price target?"
+    return "Would you like to optimize next for affordability, job demand, or program stability?"
 
 
 def coach_with_optional_llm(programs: list[dict], prompt: str) -> dict:
@@ -90,9 +118,8 @@ def coach_with_optional_llm(programs: list[dict], prompt: str) -> dict:
     base["llm_available"] = _llm_configured()
 
     if not _llm_configured():
-        base["coach_answer"] = (
-            "LLM is not configured, so I used the local rules-based coach grounded in the IPEDS/BLS dataset."
-        )
+        base["coach_answer"] = _rules_answer(base)
+        base["next_question"] = _next_question(base["profile"])
         return base
 
     messages = [
@@ -127,4 +154,5 @@ def coach_with_optional_llm(programs: list[dict], prompt: str) -> dict:
             f"Reason: {exc}"
         )
         base["mode"] = "rules"
+    base["next_question"] = _next_question(base["profile"])
     return base

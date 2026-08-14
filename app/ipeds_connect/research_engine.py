@@ -4,6 +4,7 @@ import importlib
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -116,11 +117,11 @@ def stream_research_pipeline():
         raise subprocess.CalledProcessError(return_code, process.args)
 
 
-def output_freshness(paths: list[Path]) -> dict[str, int | None]:
-    freshness: dict[str, int | None] = {}
+def output_freshness(paths: list[Path]) -> dict[str, str | None]:
+    freshness: dict[str, str | None] = {}
     for path in paths:
         key = str(path.relative_to(ROOT))
         freshness[key] = None
         if path.exists():
-            freshness[key] = path.stat().st_mtime_ns
+            freshness[key] = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat()
     return freshness

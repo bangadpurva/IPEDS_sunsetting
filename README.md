@@ -299,7 +299,16 @@ To make the UI rebuild directly from the research pipeline:
 python3 app/build_student_data.py --run-research
 ```
 
-The local app also exposes `/api/refresh?run=1`, which runs `ipeds_bls_projections.py` before rebuilding the student-facing dataset.
+Administrative refresh endpoints are disabled by default so a published app cannot execute the research pipeline. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for trusted local operation and container deployment.
+
+### Optional Free Data Enrichment
+
+The app can cache two free public sources without depending on them at request time:
+
+- College Scorecard: institution price, admission, completion, debt, and earnings measures.
+- O*NET: occupation descriptions, skills, and in-demand technologies.
+
+After obtaining free API keys, run `python3 -m app.ipeds_connect.scorecard` and `python3 -m app.ipeds_connect.onet`, then rebuild the student dataset. Full instructions and current product limits are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/PRODUCT_STATUS.md`](docs/PRODUCT_STATUS.md).
 
 ### Optional LLM Coach
 
