@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IPEDS Student Pathways</title>
+    <link rel="stylesheet" href="styles.css?v=20260814-1">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">IPEDS + BLS projections</p>
+        <h1>Student Pathways Advisor</h1>
+      </div>
+      <div class="header-actions">
+        <button id="refreshData" class="text-button" title="Rebuild app data from research outputs">Refresh data</button>
+        <button id="runResearch" class="text-button primary" title="Run ipeds_bls_projections.py and rebuild app data">Run research</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="runtime-warning hidden" id="runtimeWarning">
+        AI Coach needs the local server. Open <strong>http://127.0.0.1:8000</strong> instead of the file version.
+      </div>
+      <section class="hero">
+        <div class="advisor-panel">
+          <div class="coach-header">
+            <div>
+              <p class="eyebrow">AI powered</p>
+              <h2>AI Coach</h2>
+            </div>
+            <span>Ask about skills, jobs, degrees, institutions, or career direction.</span>
+          </div>
+          <div class="prompt-box">
+            <label>
+              What do you want help with?
+              <textarea id="studentPrompt" rows="3" placeholder="Example: I know Python and statistics. What degrees lead to in-demand data jobs?"></textarea>
+            </label>
+            <button id="askAdvisor" class="text-button primary" type="button">Ask coach</button>
+          </div>
+          <div class="coach-result hidden" id="coachResult">
+            <div class="coach-result-head">
+              <div>
+                <p class="eyebrow" id="coachMode">AI Coach</p>
+                <h3 id="coachResultTitle">Thinking through your options</h3>
+              </div>
+              <span id="coachStatus">Ready</span>
+            </div>
+            <div id="coachAnswer" class="coach-answer"></div>
+            <div id="coachInterpretation" class="coach-interpretation"></div>
+          </div>
+          <div class="coach-examples" aria-label="Example AI Coach prompts">
+            <button type="button" data-prompt="I know Python, SQL, and statistics. What degrees fit data science careers?">Skills to degrees</button>
+            <button type="button" data-prompt="What in-demand jobs should I consider, and what degree should I choose?">Jobs to degree</button>
+            <button type="button" data-prompt="Help me compare business analytics, computer science, and statistics for a stable career path.">Compare paths</button>
+            <button type="button" data-prompt="I want a healthcare career with strong demand. What education path should I choose?">Career direction</button>
+          </div>
+          <div class="field-group">
+            <label for="interestInput">Interests</label>
+            <div class="chips" id="interestChips"></div>
+          </div>
+
+          <div class="controls-grid">
+            <label>
+              Degree target
+              <select id="degreeSelect">
+                <option value="">Any credential</option>
+                <option value="associate">Associate</option>
+                <option value="bachelor">Bachelor</option>
+                <option value="master">Master</option>
+                <option value="doctoral">Doctoral</option>
+                <option value="certificate">Certificate</option>
+              </select>
+            </label>
+            <label>
+              Risk comfort
+              <select id="riskSelect">
+                <option value="balanced">Balanced</option>
+                <option value="cautious">Cautious</option>
+                <option value="adventurous">Open to emerging paths</option>
+              </select>
+            </label>
+            <label>
+              Optimize for
+              <select id="prioritySelect">
+                <option value="balanced">Balanced</option>
+                <option value="demand">Labor demand</option>
+                <option value="stability">Program stability</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="summary-strip" id="summaryStrip"></div>
+        <div class="research-strip" id="researchStrip"></div>
+        <div class="run-status hidden" id="runStatus">
+          <div class="run-status-head">
+            <div>
+              <b id="runStage">Idle</b>
+              <span id="runMessage">Research pipeline has not started.</span>
+            </div>
+            <span id="runState">idle</span>
+          </div>
+          <div class="run-log" id="runLog"></div>
+        </div>
+      </section>
+
+      <nav class="view-tabs" aria-label="Explorer views">
+        <button class="tab-button active" data-view="advisorView">Advisor</button>
+        <button class="tab-button" data-view="jobsView">Jobs</button>
+        <button class="tab-button" data-view="institutionsView">Institutions</button>
+        <button class="tab-button" data-view="demographicsView">Demographics</button>
+      </nav>
+
+      <section class="workspace view-panel active" id="advisorView">
+        <aside class="filters">
+          <label>
+            Search programs
+            <input id="searchInput" type="search" placeholder="Computer, Health, Education...">
+          </label>
+          <label>
+            Sunset label
+            <select id="labelFilter">
+              <option value="">All labels</option>
+              <option>Growth/Stable</option>
+              <option>Moderate</option>
+              <option>High Risk</option>
+              <option>Unstable/NA</option>
+            </select>
+          </label>
+          <label>
+            Alignment
+            <select id="alignmentFilter">
+              <option value="">All alignment levels</option>
+              <option>Strong</option>
+              <option>Moderate</option>
+              <option>Weak</option>
+              <option>Misaligned</option>
+              <option>Insufficient data</option>
+            </select>
+          </label>
+        </aside>
+
+        <section>
+          <div class="section-head">
+            <h2>Recommended paths</h2>
+            <span id="resultCount"></span>
+          </div>
+          <div id="recommendations" class="program-grid"></div>
+        </section>
+      </section>
+
+      <section class="dimensions view-panel" id="jobsView">
+        <div class="section-head">
+          <h2>Job Demand Signals</h2>
+          <span>Based on BLS-linked degree fields</span>
+        </div>
+        <div class="dimension-panel">
+          <div class="filter-bar">
+            <label>
+              Career interest
+              <input id="jobSearch" type="search" placeholder="Data, health, business...">
+            </label>
+            <label>
+              Degree level
+              <select id="jobDegreeFilter">
+                <option value="">All degree levels</option>
+              </select>
+            </label>
+            <label>
+              Sort by
+              <select id="jobSort">
+                <option value="growth">Projected growth</option>
+                <option value="openings">Annual openings</option>
+              </select>
+            </label>
+          </div>
+          <p class="helper-text">These are not job postings. They are BLS labor-market signals mapped to related IPEDS degree fields.</p>
+          <div id="jobSignals" class="table-list"></div>
+        </div>
+      </section>
+
+      <section class="dimensions view-panel" id="institutionsView">
+        <div class="section-head">
+          <h2>Institution Program Changes</h2>
+          <span id="dimensionSummary"></span>
+        </div>
+        <div class="dimension-panel">
+          <div class="filter-bar">
+            <label>
+              University
+              <input id="institutionSearch" type="search" placeholder="Search institution name">
+            </label>
+            <label>
+              State
+              <select id="stateFilter">
+                <option value="">All states</option>
+              </select>
+            </label>
+            <label>
+              Field
+              <select id="institutionFieldFilter">
+                <option value="">All fields</option>
+              </select>
+            </label>
+            <label>
+              Maximum net price
+              <select id="institutionCostFilter">
+                <option value="">Any available price</option>
+                <option value="10000">Up to $10,000</option>
+                <option value="20000">Up to $20,000</option>
+                <option value="30000">Up to $30,000</option>
+                <option value="40000">Up to $40,000</option>
+              </select>
+            </label>
+          </div>
+          <div class="section-head tight">
+            <h3>Largest program changes</h3>
+            <select id="trendDirection">
+              <option value="Declining">Declining</option>
+              <option value="Increasing">Increasing</option>
+            </select>
+          </div>
+          <p class="helper-text">Change is the difference in completions between 2019 and 2024 for the selected institution-program-award combination. Percent change uses 2019 completions as the base.</p>
+          <p class="helper-text" id="institutionGeoNote"></p>
+          <div id="institutionTrends" class="table-list"></div>
+        </div>
+      </section>
+
+      <section class="dimensions view-panel" id="demographicsView">
+        <div class="section-head">
+          <h2>Demographic Signals</h2>
+          <span>2024 completions by field and award level</span>
+        </div>
+        <div class="dimension-panel">
+          <div class="filter-bar">
+            <label>
+              Demographic view
+              <select id="demographicType">
+                <option value="gender">Gender</option>
+                <option value="race">Race / ethnicity</option>
+              </select>
+            </label>
+            <label>
+              Field
+              <select id="demographicFieldFilter">
+                <option value="">All fields</option>
+              </select>
+            </label>
+            <label>
+              Award level
+              <select id="demographicAwardFilter">
+                <option value="">All award levels</option>
+              </select>
+            </label>
+          </div>
+          <div class="section-head tight">
+            <h3 id="demographicTitle">Gender mix</h3>
+          </div>
+          <div class="legend-row" id="demographicLegend"></div>
+          <div id="genderMix" class="table-list"></div>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <p><b>Decision support, not a guarantee.</b> Program trends and labor-market projections are historical or modeled signals. Verify tuition, admissions, accreditation, licensing, and current local demand with the institution and official source before deciding.</p>
+        <p>The beta does not require an account. Avoid entering names, contact details, immigration status, health information, or other sensitive personal data in the coach.</p>
+      </footer>
+    </main>
+
+    <script src="app.js?v=20260814-2"></script>
+  </body>
+</html>
