@@ -14,7 +14,7 @@ export default function Home() {
     </header>
     <section className="v2-hero">
       <div className="v2-copy">
-        <p className="intro-label"><span>New</span> A student decision workspace</p>
+        <p className="intro-label">For first degrees, next careers, and learning at any age</p>
         <h1>See where your interests could take you.</h1>
         <p className="hero-lede">Viascope connects the things you care about to programs, careers, and colleges—then shows you the evidence without making the decision for you.</p>
         <form className="v2-starter" action="/explore" method="get">
@@ -28,7 +28,7 @@ export default function Home() {
         <div className="route-origin"><span>YOU</span><p>Curious about patterns<br/>and solving problems</p></div>
         <div className="route-line" aria-hidden="true"><i/><i/><i/></div>
         <div className="route-destinations">
-          {signals.map((signal,index)=><article className={signal.color} key={signal.label}><span>0{index+1}</span><div><p>{signal.label}</p><b>{signal.value}</b></div></article>)}
+          {signals.map(signal=><article className={signal.color} key={signal.label}><span aria-hidden="true"/><div><p>{signal.label}</p><b>{signal.value}</b></div></article>)}
         </div>
         <div className="route-foot"><span><i/> IPEDS</span><span><i/> BLS</span><p>Signals updated from public sources</p></div>
       </div>
