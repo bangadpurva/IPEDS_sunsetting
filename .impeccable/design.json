@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-02T19:45:00Z",
+  "title": "Design System: Viascope",
+  "extensions": {
+    "colorMeta": {
+      "signal-violet": {"role":"primary","displayName":"Signal Violet","canonical":"#5146E5","tonalRamp":["oklch(22% 0.12 285)","oklch(32% 0.16 285)","oklch(43% 0.20 285)","oklch(54% 0.22 285)","oklch(65% 0.18 285)","oklch(76% 0.13 285)","oklch(87% 0.07 285)","oklch(95% 0.025 285)"]},
+      "action-lime": {"role":"secondary","displayName":"Action Lime","canonical":"#DFFF58","tonalRamp":["oklch(22% 0.07 115)","oklch(32% 0.09 115)","oklch(43% 0.11 115)","oklch(54% 0.13 115)","oklch(65% 0.15 115)","oklch(76% 0.16 115)","oklch(87% 0.15 115)","oklch(95% 0.08 115)"]},
+      "momentum-coral": {"role":"tertiary","displayName":"Momentum Coral","canonical":"#FF705D","tonalRamp":["oklch(22% 0.08 30)","oklch(32% 0.12 30)","oklch(43% 0.16 30)","oklch(54% 0.19 30)","oklch(65% 0.18 30)","oklch(76% 0.13 30)","oklch(87% 0.07 30)","oklch(95% 0.025 30)"]},
+      "midnight-ink": {"role":"neutral","displayName":"Midnight Ink","canonical":"#16172C","tonalRamp":["#16172C","#292B43","#41435B","#5A5C72","#75768A","#9293A4","#B1B1BE","#F1F1F5"]},
+      "workspace": {"role":"neutral","displayName":"Open Workspace","canonical":"#F7F7FA","tonalRamp":["#1E1E28","#353540","#50505C","#6C6C77","#898993","#A8A8B0","#CACAD0","#F7F7FA"]}
+    },
+    "typographyMeta": {
+      "display": {"displayName":"Display","purpose":"Public landing hero only."},
+      "headline": {"displayName":"Headline","purpose":"Product and major section headings."},
+      "title": {"displayName":"Title","purpose":"Panels, paths, and comparisons."},
+      "body": {"displayName":"Body","purpose":"Guidance and explanations."},
+      "label": {"displayName":"Label","purpose":"Controls, tabs, and data headers."}
+    },
+    "shadows": [
+      {"name":"control-press","value":"5px 5px 0 #16172C","purpose":"Primary landing input and tactile CTA only."},
+      {"name":"brand-lift","value":"10px 10px 0 #5146E5","purpose":"Signature possibility map only."},
+      {"name":"comparison-lift","value":"5px 5px 0 #DFFF58","purpose":"Selected comparison options."}
+    ],
+    "motion": [
+      {"name":"state-fast","value":"180ms cubic-bezier(0.25, 1, 0.5, 1)","purpose":"Hover, focus, and selected-state feedback."},
+      {"name":"state-standard","value":"220ms cubic-bezier(0.25, 1, 0.5, 1)","purpose":"Panel and progressive-disclosure transitions."},
+      {"name":"reduced-motion","value":"0.01ms","purpose":"Near-instant alternative when reduced motion is requested."}
+    ],
+    "breakpoints": [
+      {"name":"mobile","value":"600px"},
+      {"name":"app-collapse","value":"760px"},
+      {"name":"tablet","value":"900px"},
+      {"name":"dense-table","value":"1050px"}
+    ]
+  },
+  "components": [
+    {"name":"Primary Button","kind":"button","refersTo":"button-primary","description":"The main forward action on a surface.","html":"<button class=\"ds-btn-primary\">Map my options ↗</button>","css":".ds-btn-primary{border:2px solid #16172c;border-radius:9px;padding:12px 18px;background:#dfff58;color:#16172c;font:750 .75rem Geist,Arial,sans-serif;box-shadow:4px 4px 0 #16172c;cursor:pointer;transition:background 180ms,transform 180ms,box-shadow 180ms}.ds-btn-primary:hover{background:#d0f03f}.ds-btn-primary:focus-visible{outline:3px solid #8c84ff;outline-offset:3px}.ds-btn-primary:active{transform:translate(2px,2px);box-shadow:2px 2px 0 #16172c}"},
+    {"name":"Secondary Button","kind":"button","refersTo":"button-secondary","description":"A lower-emphasis comparison or reset action.","html":"<button class=\"ds-btn-secondary\">+ Compare</button>","css":".ds-btn-secondary{border:1px solid #cacbd8;border-radius:8px;padding:8px 11px;background:#fff;color:#4e5067;font:750 .72rem Geist,Arial,sans-serif;cursor:pointer;transition:border-color 180ms,color 180ms}.ds-btn-secondary:hover{border-color:#5146e5;color:#5146e5}.ds-btn-secondary:focus-visible{outline:3px solid #e6e3ff;outline-offset:2px}.ds-btn-secondary:active{background:#eeecff}"},
+    {"name":"Interest Input","kind":"input","refersTo":"input","description":"A plain-language starting point for a learner's question.","html":"<label class=\"ds-field\"><span>What are you curious about?</span><input placeholder=\"Healthcare, data, design…\"></label>","css":".ds-field{display:grid;gap:8px;color:#16172c;font:750 .75rem Geist,Arial,sans-serif}.ds-field input{border:1px solid #cfcfdd;border-radius:9px;padding:11px 12px;background:#fff;color:#16172c;font:400 .9rem Geist,Arial,sans-serif;outline:0}.ds-field input::placeholder{color:#64667b;opacity:1}.ds-field input:hover{border-color:#aaaabb}.ds-field input:focus-visible{border-color:#5146e5;box-shadow:0 0 0 3px #e6e3ff}"},
+    {"name":"Selected Choice","kind":"chip","refersTo":"choice-selected","description":"An explicit, non-color-only onboarding selection.","html":"<button class=\"ds-choice\"><span>✓</span> Solve puzzles</button>","css":".ds-choice{display:flex;align-items:center;gap:9px;border:1px solid #aaa4ff;border-radius:9px;padding:9px 10px;background:#eeecff;color:#3027a7;font:750 .72rem Geist,Arial,sans-serif;cursor:pointer}.ds-choice:hover{background:#e5e2ff}.ds-choice:focus-visible{outline:3px solid #d7d3ff;outline-offset:2px}.ds-choice:active{background:#dcd8ff}"},
+    {"name":"Data Row","kind":"custom","refersTo":"data-container","description":"A scannable pathway row with aligned evidence and action.","html":"<div class=\"ds-data-row\"><div><b>Computer & Information Sciences</b><small>Bachelor's degree</small></div><strong>82<small>/100</small></strong><span>+7.7% outlook</span><button>+ Compare</button></div>","css":".ds-data-row{display:grid;grid-template-columns:minmax(220px,2fr) 70px 100px 90px;align-items:center;gap:15px;border:1px solid #dedee8;border-radius:12px;padding:14px 16px;background:#fff;color:#16172c;font:400 .75rem Geist,Arial,sans-serif}.ds-data-row>div{display:grid;gap:5px}.ds-data-row small{color:#74768a;font-size:.65rem}.ds-data-row>span{color:#167f48;font-weight:750}.ds-data-row button{border:1px solid #cacbd8;border-radius:8px;padding:7px 8px;background:#fff;color:#4e5067;font-weight:750}.ds-data-row:hover{background:#fafaff}.ds-data-row:focus-within{outline:3px solid #e6e3ff;outline-offset:2px}"},
+    {"name":"Viascope Navigation","kind":"nav","description":"Stable product navigation with the tactile map-pin wordmark.","html":"<nav class=\"ds-nav\"><a class=\"ds-brand\" href=\"#\"><span>V</span>viascope</a><a href=\"#\">How data works</a></nav>","css":".ds-nav{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #dedee8;padding:12px 24px;background:#fff;color:#16172c;font:700 .75rem Geist,Arial,sans-serif}.ds-nav a{color:inherit;text-decoration:none}.ds-brand{display:flex;align-items:center;gap:9px;font-size:1.15rem;letter-spacing:-.03em}.ds-brand span{width:34px;height:34px;display:grid;place-items:center;border-radius:50% 50% 50% 12px;background:#5146e5;color:#fff;transform:rotate(-8deg)}.ds-nav a:hover{color:#5146e5}.ds-nav a:focus-visible{outline:3px solid #e6e3ff;outline-offset:3px}"}
+  ],
+  "narrative": {
+    "northStar": "The Open Map",
+    "overview": "Viascope should feel like unfolding a clear map on a table with a capable guide nearby. It presents many routes without making the landscape intimidating: open white space, firm structure, bright navigational signals, and dense evidence revealed exactly when it becomes useful. The system is optimistic and current, but every expressive choice must improve orientation or confidence. The public surface may use larger compositions and the full palette. The product surface is more restrained: neutral workspace layers, predictable controls, compact tables, and Signal Violet reserved for current position and primary state. Tactility comes from crisp strokes and small, directional structural shadows—not ambient decoration.",
+    "keyCharacteristics": ["Bright navigation signals on a calm neutral workspace","Tactile, confident controls with crisp edges","Progressive disclosure inspired by Airbnb's approachable hierarchy","Dense evidence organized for scanning rather than decoration","Plain language for learners at every stage of life"],
+    "rules": [
+      {"name":"The Map-Key Rule","body":"Signal Violet means location or selection; Action Lime means movement or action; Momentum Coral means noteworthy change. Never swap these roles casually.","section":"colors"},
+      {"name":"The No Color Alone Rule","body":"Every status color requires a word, value, icon, or shape that communicates the same meaning.","section":"colors"},
+      {"name":"The One-Family Rule","body":"Product UI always uses the Geist family. Do not introduce a display face into controls, tables, or onboarding.","section":"typography"},
+      {"name":"The Plain-Language Rule","body":"A learner must understand a label before they need to understand the underlying dataset.","section":"typography"},
+      {"name":"The Earned Lift Rule","body":"A shadow must indicate action, selection, or a signature brand moment. Static data tables and routine panels remain flat.","section":"elevation"}
+    ],
+    "dos": ["Do use Signal Violet for current position, focus, and selection.","Do use Action Lime for a single primary movement on a surface.","Do reveal complexity progressively, following Airbnb's approachable entry and clear hierarchy.","Do keep every essential interaction keyboard accessible with visible focus.","Do pair data with source, period, meaning, and uncertainty.","Do adapt density structurally on mobile by prioritizing columns and stacking controls."],
+    "donts": ["Don't resemble a legacy university portal or a dense government-data dashboard.","Don't build a high-pressure admissions funnel or an opaque personality quiz that presents an answer as destiny.","Don't use generic AI-product aesthetics, decorative dashboards, or repeated ghost cards.","Don't infantilize adult learners or assume age, income, family support, or prior education.","Don't bury uncertainty or imply guaranteed education, employment, wage, or admissions outcomes.","Don't require research terminology before a learner receives value.","Don't communicate status through color alone.","Don't add soft ambient shadows to routine panels or nest cards inside cards."]
+  }
+}
