@@ -1,43 +1,24 @@
 import Link from 'next/link';
 
-const signals = [
-  { label: 'Work you might enjoy', value: 'Analyze · Build · Explain', color: 'violet' },
-  { label: 'Study routes', value: '18 matched programs', color: 'lime' },
-  { label: 'Career evidence', value: '7.7% projected growth', color: 'coral' },
+type IconName = 'compass' | 'book' | 'trend' | 'school' | 'compare' | 'question' | 'check';
+function Icon({name}: {name:IconName}) { const paths:Record<IconName,React.ReactNode>={compass:<><circle cx="12" cy="12" r="8"/><path d="m15 9-2 4-4 2 2-4 4-2Z"/></>,book:<><path d="M5 4.5h9a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3V4.5Z"/><path d="M8 20V8.5a2 2 0 0 1 2-2h7"/></>,trend:<><path d="M4 18V6M4 18h16"/><path d="m7 14 4-4 3 2 5-6"/><path d="M16 6h3v3"/></>,school:<><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 12v5c3 2 7 2 10 0v-5M21 9v6"/></>,compare:<><path d="M8 4v16M16 4v16M4 8l4-4 4 4M12 16l4 4 4-4"/></>,question:<><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 3.1 2.3c-.8.3-.8.9-.8 1.7M12 17h.01"/></>,check:<path d="m5 12 4 4L19 6"/>};return <svg className="line-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg> }
+
+const evidence=[
+  {icon:'book' as const,title:'What people are studying',body:'See how completions in broad fields have changed using IPEDS education data.',source:'IPEDS · 2019–2024'},
+  {icon:'trend' as const,title:'Where work is changing',body:'Review projected growth, annual openings, and median wages across related careers.',source:'BLS · 2024–2034'},
+  {icon:'school' as const,title:'Which schools offer it',body:'Find institutions that recently reported graduates in the fields you are exploring.',source:'National coverage'},
 ];
 
-export default function Home() {
-  return <main className="landing-v2" id="top">
-    <header className="site-header v2-header">
-      <Link className="brand v2-brand" href="/" aria-label="Viascope home"><span className="brand-mark">V</span><span>viascope</span></Link>
-      <nav aria-label="Main navigation"><a href="#approach">How it works</a><Link href="/methodology">The evidence</Link><Link className="nav-cta" href="/explore">Open explorer</Link></nav>
-    </header>
-    <section className="v2-hero">
-      <div className="v2-copy">
-        <p className="intro-label">For first degrees, next careers, and learning at any age</p>
-        <h1>See where your interests could take you.</h1>
-        <p className="hero-lede">Viascope connects the things you care about to programs, careers, and colleges—then shows you the evidence without making the decision for you.</p>
-        <form className="v2-starter" action="/explore" method="get">
-          <label htmlFor="goal">Start with anything</label>
-          <div><input id="goal" name="goal" required placeholder="I like solving problems with data…"/><button type="submit">Map my options <span aria-hidden="true">↗</span></button></div>
-          <p>Free to explore · No account · Built from federal education and labor data</p>
-        </form>
-      </div>
-      <div className="route-board" aria-label="Example Viascope journey">
-        <div className="route-head"><span>Your possibility map</span><b>Data + technology</b></div>
-        <div className="route-origin"><span>YOU</span><p>Curious about patterns<br/>and solving problems</p></div>
-        <div className="route-line" aria-hidden="true"><i/><i/><i/></div>
-        <div className="route-destinations">
-          {signals.map(signal=><article className={signal.color} key={signal.label}><span aria-hidden="true"/><div><p>{signal.label}</p><b>{signal.value}</b></div></article>)}
-        </div>
-        <div className="route-foot"><span><i/> IPEDS</span><span><i/> BLS</span><p>Signals updated from public sources</p></div>
-      </div>
-    </section>
-    <section className="proof-strip"><p>One place to connect</p><div><b>Interests</b><span>→</span><b>Programs</b><span>→</span><b>Careers</b><span>→</span><b>Colleges</b></div></section>
-    <section className="v2-approach" id="approach">
-      <div><h2>A clearer decision starts with better questions.</h2><p>Not another personality quiz. Viascope helps you investigate the routes between who you are now and what you might do next.</p></div>
-      <ol><li><span>1</span><div><b>Tell us what matters</b><p>Interests, preferred credential, location, and priorities.</p></div></li><li><span>2</span><div><b>Read the signals</b><p>Compare program momentum, job outlook, openings, and institutions.</p></div></li><li><span>3</span><div><b>Leave with a shortlist</b><p>Build questions to take to families, advisors, and colleges.</p></div></li></ol>
-    </section>
-    <footer><Link className="brand v2-brand" href="/"><span className="brand-mark">V</span><span>viascope</span></Link><p>Explore widely. Decide thoughtfully.</p><div><Link href="/methodology">Methodology</Link><Link href="/privacy">Privacy</Link></div></footer>
-  </main>;
-}
+export default function Home(){return <main className="landing-v3" id="top">
+  <a className="skip-link" href="#main-content">Skip to main content</a>
+  <header className="site-header landing-header"><Link className="brand v2-brand" href="/" aria-label="Viascope home"><span className="brand-mark">V</span><span>viascope</span></Link><nav aria-label="Main navigation"><a href="#how">How it works</a><a href="#evidence">What you can learn</a><Link href="/methodology">Our data</Link><Link className="nav-cta" href="/explore">Explore paths</Link></nav></header>
+  <section className="landing-hero" id="main-content">
+    <div className="hero-message"><p className="audience-line"><span><Icon name="compass"/></span> For every stage of learning</p><h1>Your next direction starts with a clearer view.</h1><p className="hero-lede">Turn an interest into learning paths you can understand. Viascope brings programs, careers, and colleges together—so you can compare the evidence and decide what deserves a closer look.</p><form className="hero-search" action="/explore" method="get"><label htmlFor="goal">What are you curious about?</label><div><input id="goal" name="goal" required placeholder="Try healthcare, data, design, or anything else"/><button type="submit">Show me the paths <span>→</span></button></div><p><Icon name="check"/> Free to use <span>·</span> <Icon name="check"/> No account needed <span>·</span> <Icon name="check"/> Public data</p></form></div>
+    <div className="open-map" aria-label="An example journey from an interest to possible learning paths"><div className="map-top"><span>THE OPEN MAP</span><span className="map-status"><i/> Public data connected</span></div><div className="map-question"><span className="map-icon"><Icon name="compass"/></span><div><small>Your starting point</small><strong>“I enjoy finding patterns.”</strong></div></div><div className="map-route" aria-hidden="true"><i/><i/><i/></div><div className="map-outcomes"><article><span className="map-icon violet"><Icon name="book"/></span><div><small>Study field</small><strong>Computer & information sciences</strong></div><b>Explore</b></article><article><span className="map-icon coral"><Icon name="trend"/></span><div><small>Career signal</small><strong>Growing national demand</strong></div><b>Compare</b></article><article><span className="map-icon lime"><Icon name="school"/></span><div><small>School options</small><strong>Programs across the country</strong></div><b>Find</b></article></div><p className="map-caption">A starting point, not a verdict. Every result explains why it appeared.</p></div>
+  </section>
+  <section className="trust-band" aria-label="Viascope principles"><p><strong>Built for decisions—not rankings.</strong> We organize public evidence and show its limits. You stay in control.</p><Link href="/methodology">See how the evidence works <span>→</span></Link></section>
+  <section className="how-section" id="how"><div className="section-intro"><p>From curious to confident</p><h2>A simple way through a complicated decision.</h2><p>You do not need to know the right degree name, career title, or research vocabulary before you begin.</p></div><ol className="journey-steps"><li><div className="step-number">1</div><span className="step-icon"><Icon name="question"/></span><div><h3>Start in your own words</h3><p>Tell us what interests you or how you like to work. One idea is enough.</p></div></li><li><div className="step-number">2</div><span className="step-icon"><Icon name="compare"/></span><div><h3>See the routes and tradeoffs</h3><p>Explore connected fields, credentials, careers, wages, and schools without a hidden ranking.</p></div></li><li><div className="step-number">3</div><span className="step-icon"><Icon name="check"/></span><div><h3>Build a shortlist you can explain</h3><p>Compare up to three routes and leave with sharper questions for schools, advisors, or family.</p></div></li></ol></section>
+  <section className="evidence-section" id="evidence"><div className="evidence-heading"><div><p>One view, connected evidence</p><h2>Understand more than the program name.</h2></div><p>Education choices live at the intersection of personal fit, study options, and a changing world of work. Viascope helps you look across all three.</p></div><div className="evidence-list">{evidence.map((item,index)=><article key={item.title}><span className={`evidence-icon tone-${index}`}><Icon name={item.icon}/></span><div><h3>{item.title}</h3><p>{item.body}</p></div><small>{item.source}</small></article>)}</div></section>
+  <section className="who-section"><div><Icon name="compass"/><h2>School is not one moment in life.</h2></div><p>Viascope is for a first degree, a new career, a return to school, an added credential—or simply the beginning of a better question.</p><Link href="/explore">Open your map <span>→</span></Link></section>
+  <footer><Link className="brand v2-brand" href="/"><span className="brand-mark">V</span><span>viascope</span></Link><p>Explore widely. Decide thoughtfully.</p><div><Link href="/methodology">Methodology</Link><Link href="/privacy">Privacy</Link></div></footer>
+</main>}
