@@ -1,53 +1,43 @@
-const pathways = [
-  { field: 'Computer & Information Sciences', degree: "Bachelor's degree", growth: '+14.8%', tone: 'mint' },
-  { field: 'Health Professions', degree: "Master's degree", growth: '+15.3%', tone: 'blue' },
-  { field: 'Mathematics & Statistics', degree: "Bachelor's degree", growth: '+11.2%', tone: 'amber' },
+import Link from 'next/link';
+
+const signals = [
+  { label: 'Work you might enjoy', value: 'Analyze · Build · Explain', color: 'violet' },
+  { label: 'Study routes', value: '18 matched programs', color: 'lime' },
+  { label: 'Career evidence', value: '7.7% projected growth', color: 'coral' },
 ];
 
 export default function Home() {
-  return (
-    <main>
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="Pathwise home"><span className="brand-mark">P</span><span>Pathwise</span></a>
-        <nav aria-label="Main navigation"><a href="#how">How it works</a><a href="/methodology">Our data</a><a className="nav-cta" href="#start">Find your path</a></nav>
-      </header>
-
-      <section className="hero" id="top">
-        <div className="hero-copy">
-          <p className="eyebrow">A clearer way through college and career choices</p>
-          <h1>Choose a path with evidence, not guesswork.</h1>
-          <p className="hero-lede">Connect what you enjoy with degrees, careers, and colleges—then see the labor-market signals and program trends behind every recommendation.</p>
-          <form className="path-starter" id="start" action="/explore" method="get">
-            <label htmlFor="goal">What are you interested in?</label>
-            <div className="starter-row"><input id="goal" name="goal" placeholder="Try data science, healthcare, design…" /><button type="submit">Explore paths <span aria-hidden="true">→</span></button></div>
-            <p>No account required. Start broad—you can refine location, budget, and degree later.</p>
-          </form>
-          <div className="trust-row" id="evidence"><span><b>1.2M+</b> completion records</span><span><b>6,050</b> institutions</span><span><b>Federal</b> IPEDS + BLS data</span></div>
+  return <main className="landing-v2" id="top">
+    <header className="site-header v2-header">
+      <Link className="brand v2-brand" href="/" aria-label="Viascope home"><span className="brand-mark">V</span><span>viascope</span></Link>
+      <nav aria-label="Main navigation"><a href="#approach">How it works</a><Link href="/methodology">The evidence</Link><Link className="nav-cta" href="/explore">Open explorer</Link></nav>
+    </header>
+    <section className="v2-hero">
+      <div className="v2-copy">
+        <p className="intro-label"><span>New</span> A student decision workspace</p>
+        <h1>See where your interests could take you.</h1>
+        <p className="hero-lede">Viascope connects the things you care about to programs, careers, and colleges—then shows you the evidence without making the decision for you.</p>
+        <form className="v2-starter" action="/explore" method="get">
+          <label htmlFor="goal">Start with anything</label>
+          <div><input id="goal" name="goal" required placeholder="I like solving problems with data…"/><button type="submit">Map my options <span aria-hidden="true">↗</span></button></div>
+          <p>Free to explore · No account · Built from federal education and labor data</p>
+        </form>
+      </div>
+      <div className="route-board" aria-label="Example Viascope journey">
+        <div className="route-head"><span>Your possibility map</span><b>Data + technology</b></div>
+        <div className="route-origin"><span>YOU</span><p>Curious about patterns<br/>and solving problems</p></div>
+        <div className="route-line" aria-hidden="true"><i/><i/><i/></div>
+        <div className="route-destinations">
+          {signals.map((signal,index)=><article className={signal.color} key={signal.label}><span>0{index+1}</span><div><p>{signal.label}</p><b>{signal.value}</b></div></article>)}
         </div>
-
-        <div className="signal-panel" aria-label="Example recommended pathways">
-          <div className="panel-top"><div><p className="panel-kicker">A sample shortlist</p><h2>Paths worth exploring</h2></div><span className="evidence-badge">Evidence-backed</span></div>
-          <div className="path-list">
-            {pathways.map((path, index) => (
-              <article className="path-card" key={path.field}><span className={`path-number ${path.tone}`}>{index + 1}</span><div><h3>{path.field}</h3><p>{path.degree}</p></div><div className="growth"><b>{path.growth}</b><span>projected signal</span></div></article>
-            ))}
-          </div>
-          <div className="panel-note"><span className="note-icon">i</span><p>Recommendations explain program momentum, job demand, and where the data is uncertain.</p></div>
-        </div>
-      </section>
-
-      <section className="how" id="how">
-        <p className="eyebrow">Built around the student decision</p>
-        <h2>From “I’m interested in…” to a path you can act on.</h2>
-        <div className="steps">
-          {[
-            ['01', 'Tell us what matters', 'Interests, preferred credential, location, budget, and career priorities.'],
-            ['02', 'Compare real pathways', 'See related degrees, occupations, institutions, and the signals behind each match.'],
-            ['03', 'Build your next-step plan', 'Shortlist options and know exactly what to verify before you apply.'],
-          ].map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}
-        </div>
-      </section>
-      <footer><a className="brand" href="#top"><span className="brand-mark">P</span><span>Pathwise</span></a><p>Evidence to explore. Judgment stays with you.</p><div><a href="/methodology">Methodology</a><a href="/privacy">Privacy</a></div></footer>
-    </main>
-  );
+        <div className="route-foot"><span><i/> IPEDS</span><span><i/> BLS</span><p>Signals updated from public sources</p></div>
+      </div>
+    </section>
+    <section className="proof-strip"><p>One place to connect</p><div><b>Interests</b><span>→</span><b>Programs</b><span>→</span><b>Careers</b><span>→</span><b>Colleges</b></div></section>
+    <section className="v2-approach" id="approach">
+      <div><h2>A clearer decision starts with better questions.</h2><p>Not another personality quiz. Viascope helps you investigate the routes between who you are now and what you might do next.</p></div>
+      <ol><li><span>1</span><div><b>Tell us what matters</b><p>Interests, preferred credential, location, and priorities.</p></div></li><li><span>2</span><div><b>Read the signals</b><p>Compare program momentum, job outlook, openings, and institutions.</p></div></li><li><span>3</span><div><b>Leave with a shortlist</b><p>Build questions to take to families, advisors, and colleges.</p></div></li></ol>
+    </section>
+    <footer><Link className="brand v2-brand" href="/"><span className="brand-mark">V</span><span>viascope</span></Link><p>Explore widely. Decide thoughtfully.</p><div><Link href="/methodology">Methodology</Link><Link href="/privacy">Privacy</Link></div></footer>
+  </main>;
 }

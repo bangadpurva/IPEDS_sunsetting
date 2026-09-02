@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Pathwise — Evidence-backed education and career pathways',
+  title: 'Viascope — See where your interests could take you',
   description: 'Explore degrees, careers, and colleges using transparent IPEDS and BLS evidence.',
   openGraph: {
-    title: 'Pathwise — Choose a path with evidence, not guesswork.',
+    title: 'Viascope — See where your interests could take you',
     description: 'Explore degrees, careers, and colleges using transparent IPEDS and BLS evidence.',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Pathwise student pathway explorer' }],
+    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Viascope student decision workspace' }],
   },
   twitter: { card: 'summary_large_image', images: ['/og.png'] },
 };
