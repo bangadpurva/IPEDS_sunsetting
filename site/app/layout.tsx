@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import Link from 'next/link';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -34,6 +35,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <aside className="guide-notice" role="note" aria-label="Viascope guidance disclaimer"><b>Use Viascope as a guide.</b><span>Results reflect available public data and may include AI-assisted explanations. They are not admissions, financial, or career guarantees.</span><Link href="/methodology">Review the evidence and limits</Link></aside>
       </body>
     </html>
   );

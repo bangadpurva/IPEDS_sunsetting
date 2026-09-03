@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+.guide-notice{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 16px;padding:14px clamp(20px,5vw,64px);border-top:1px solid #cacbd8;background:#16172c;color:#fff;font-size:.78rem;line-height:1.5}.guide-notice span{color:#d7d8e4}.guide-notice a{color:#dfff58;font-weight:750;text-decoration:underline;text-underline-offset:3px}
+
 :root {
   --ink:#16172c; --ink-soft:#45475e; --muted:#5e6078; --workspace:#f7f7fa; --surface:#fff;
   --line:#dedee8; --line-strong:#cacbd8; --violet:#5146e5; --violet-deep:#3428bd; --violet-soft:#eeecff;

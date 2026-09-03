@@ -9,7 +9,8 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
-    "test": "node --experimental-strip-types --test app/explore/location.test.ts app/api/coach/coach.test.ts",
+    "test": "node --experimental-strip-types --test app/explore/location.test.ts app/api/coach/coach.test.ts evals/coach-eval.test.ts",
+    "eval:coach": "node --experimental-strip-types evals/coach-eval.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {
