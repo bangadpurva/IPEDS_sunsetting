@@ -1,66 +1,43 @@
-# Optional LLM Coach
+# Viascope Coach setup
 
-The app does not require an LLM. By default, AI Coach uses local rules plus the IPEDS/BLS dataset.
+The `/explore` Coach works immediately without a paid model. In **rules mode** it explains the visible IPEDS/BLS evidence and asks a practical follow-up. Model access is an optional reasoning and writing layer; recommendations remain grounded in evidence supplied by Viascope.
 
-When configured, the server can call an LLM to write a more natural coaching response while keeping recommendations grounded in the local research data.
+## Free local setup with Ollama
 
-## Recommended Free Setup: Ollama
-
-Use Ollama for a free local LLM. This avoids token billing and keeps prompts on your machine.
-
-Install Ollama, then pull one model:
+Install Ollama, then run:
 
 ```bash
 ollama pull qwen2.5:7b
+ollama serve
 ```
 
-Start the app with:
+Create `site/.env.local` (ignored by Git):
 
-```bash
-export OLLAMA_BASE_URL="http://127.0.0.1:11434"
-export OLLAMA_MODEL="qwen2.5:7b"
-python3 -B -m app.ipeds_connect.server
+```dotenv
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen2.5:7b
 ```
 
-Good free model options:
+In another terminal, run `cd site`, then `npm run dev`. Open `http://localhost:3000/explore`, choose an interest, open the Coach, and ask a question. An **AI-assisted** response label confirms the local model answered. Ollama on a laptop cannot serve the published website; production needs a hosted model endpoint.
 
-| Model | Why use it |
-|---|---|
-| `qwen2.5:7b` | Good general reasoning, useful for skills and career-language interpretation |
-| `llama3.1:8b` | Strong general conversation and explanation |
-| `mistral:7b` | Fast responses on modest hardware |
+## Optional hosted OpenAI setup
 
-For this app, a small local model is enough because the app supplies the IPEDS/BLS context and asks the model to explain, compare, and ask follow-up questions.
+Add these server-only variables to `site/.env.local` locally, or to the hosting project's secret/environment settings in production:
 
-## OpenAI-Compatible API
-
-```bash
-export OPENAI_API_KEY="..."
-export OPENAI_MODEL="gpt-4.1-mini"
-python3 -B -m app.ipeds_connect.server
+```dotenv
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-Optional:
+Never commit `.env.local`, expose the key in browser code, or name it `NEXT_PUBLIC_OPENAI_API_KEY`. The server route calls the Responses API and the browser receives only the answer.
 
-```bash
-export OPENAI_BASE_URL="https://api.openai.com/v1"
-```
+## Failure behavior and data boundary
 
-`OPENAI_BASE_URL` can point to any OpenAI-compatible server.
+- No provider configured: rules mode.
+- Ollama configured: local model first.
+- OpenAI configured without Ollama: hosted model.
+- Provider unavailable or times out: automatic rules-mode fallback.
+- Each request contains the current question, interest/work style, and no more than five visible field summaries. It does not contain the full dataset, precise geolocation, or an account identity.
 
-## Local Ollama
-
-```bash
-export OLLAMA_BASE_URL="http://127.0.0.1:11434"
-export OLLAMA_MODEL="qwen2.5:7b"
-python3 -B -m app.ipeds_connect.server
-```
-
-## Behavior
-
-- If an LLM is configured and responds, API results include `mode: "llm"`.
-- If no LLM is configured, results include `mode: "rules"`.
-- If the LLM call fails, the app falls back to rules and returns the failure reason.
-- LLM output receives only a compact recommendation context, not the full raw dataset.
-
-The LLM should explain choices, ask practical next-step questions, and flag when live job-market verification is needed.
+Copy `.env.example` as a starting point. The committed file contains names and examples only—never secrets.
