@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {extractLearnerProfile} from './profile.ts';import {verifyCoachAnswer} from './guardrail.ts';
+test('profile agent extracts decision constraints',()=>{const p=extractLearnerProfile('I want an online certificate under $20,000 within 2 years near Detroit, MI');assert.equal(p.learningMode,'online');assert.equal(p.credential,'Certificate');assert.equal(p.budget,20000);assert.equal(p.timeline,'2 years');assert.equal(p.location,'Detroit, MI')});
+test('profile agent reports information gaps',()=>{const p=extractLearnerProfile('Help me choose');assert.ok(p.missing.includes('budget'));assert.ok(p.missing.includes('credential'))});
+test('guardrail accepts grounded cautious output',()=>assert.equal(verifyCoachAnswer('This broad field shows +6.2% growth; verify program details.',[{field:'Health',jobGrowth:6.2}]).passed,true));
+test('guardrail blocks unsupported numbers and guarantees',()=>{const result=verifyCoachAnswer('You have a guaranteed 99% chance.',[{field:'Health',jobGrowth:6.2}]);assert.deepEqual(result.issues,['unsupported_numeric_claim','unsafe_confidence'])});

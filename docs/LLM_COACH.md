@@ -2,6 +2,18 @@
 
 The `/explore` Coach works immediately without a paid model. In **rules mode** it explains the visible IPEDS/BLS evidence and asks a practical follow-up. Model access is an optional reasoning and writing layer; recommendations remain grounded in evidence supplied by Viascope.
 
+## Bounded agent workflow
+
+Each Coach request now follows a controlled agent loop:
+
+1. The Profile Agent extracts explicit constraints such as budget, timeline, location, credential, learning format, and career goal. Missing information stays missing; it is not guessed.
+2. Viascope supplies no more than five relevant evidence records from the current explorer view.
+3. An optional configured model writes an explanation.
+4. The Verification Guardrail checks numeric claims, unsafe guarantees, and excessive output before the answer reaches the learner.
+5. If verification fails or the provider is unavailable, Viascope returns the deterministic evidence-grounded response.
+
+The interface shows the profile it understood so the learner can spot omissions or misinterpretations.
+
 ## Free local setup with Ollama
 
 Install Ollama, then run:

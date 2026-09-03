@@ -50,6 +50,6 @@ export function rulesResponse(request: CoachRequest) {
   return { answer: intro + comparison + caution, nextQuestion: 'Which matters most for your next step: cost, time to complete, nearby options, or career outlook?' };
 }
 
-export function modelPrompt(request: CoachRequest, fallback: ReturnType<typeof rulesResponse>) {
-  return `You are the Viascope education decision coach. Answer the learner's question using only the supplied evidence. Be warm, concise, practical, and candid about missing data. Never promise admission, employment, salary, or personal outcomes. Distinguish national field-level evidence from institution-level facts. End with one useful follow-up question.\n\nLearner profile: ${JSON.stringify(request.profile)}\nEvidence: ${JSON.stringify(request.evidence)}\nDeterministic fallback: ${fallback.answer}\nLearner question: ${request.message}`;
+export function modelPrompt(request: CoachRequest, fallback: ReturnType<typeof rulesResponse>, structuredProfile?:unknown) {
+  return `You are the Viascope education decision coach. Answer the learner's question using only the supplied evidence. Be warm, concise, practical, and candid about missing data. Never promise admission, employment, salary, or personal outcomes. Distinguish national field-level evidence from institution-level facts. End with one useful follow-up question.\n\nLearner profile: ${JSON.stringify(structuredProfile||request.profile)}\nEvidence: ${JSON.stringify(request.evidence)}\nDeterministic fallback: ${fallback.answer}\nLearner question: ${request.message}`;
 }

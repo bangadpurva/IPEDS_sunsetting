@@ -1,4 +1,6 @@
 import { modelPrompt, normalizeCoachRequest, rulesResponse } from './coach';
+import { extractLearnerProfile } from './profile';
+import { verifyCoachAnswer } from './guardrail';
 
 type ModelResponse={output_text?:unknown;output?:Array<{content?:Array<{type?:string;text?:string}>}>;message?:{content?:string}};
 function extractResponseText(data: ModelResponse): string {
@@ -34,11 +36,12 @@ export async function POST(request: Request) {
   try {
     const input = normalizeCoachRequest(await request.json());
     const fallback = rulesResponse(input);
+    const profile = extractLearnerProfile(input.message,input.profile);
     try {
-      const enhanced = await askConfiguredModel(modelPrompt(input, fallback));
-      if (enhanced) return Response.json({...fallback,...enhanced});
+      const enhanced = await askConfiguredModel(modelPrompt(input, fallback, profile));
+      if (enhanced) {const verification=verifyCoachAnswer(enhanced.answer,input.evidence||[]);if(verification.passed)return Response.json({...fallback,...enhanced,profile,verification});}
     } catch { /* Keep the experience available when an optional provider fails. */ }
-    return Response.json({...fallback,mode:'rules'});
+    return Response.json({...fallback,mode:'rules',profile,verification:verifyCoachAnswer(fallback.answer,input.evidence||[])});
   } catch (error) {
     return Response.json({error:error instanceof Error?error.message:'Invalid request.'},{status:400});
   }
