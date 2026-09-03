@@ -17,19 +17,20 @@
 
 ## Next product validation work
 
-- Obtain free API keys and generate the first Scorecard and O*NET caches.
+- Obtain an O*NET key and generate the first occupation-enrichment cache.
 - Validate CIP-SOC recommendations with students and career advisors.
-- Enrich the institution comparison workspace with current College Scorecard cost and outcome measures.
+- Validate College Scorecard cost and outcome explanations with prospective learners.
 - Resolve locations to states or coordinates and rank institutions by distance.
 - Decide whether annual-cost preference means sticker price or average net price.
 - Add anonymous recommendation feedback and outcome metrics.
 - Move chat sessions to a privacy-conscious persistent store only if users need saved plans.
 - Conduct accessibility, security, and methodology reviews before a public beta.
 
-The next release criterion should be: a learner can enter interests, credential, location, and budget; receive relevant careers; compare three schools; and understand the source and limitation of every important number. The website now supports interests, credentials, state filtering, careers, and three-school comparison. Cost enrichment and location-distance ranking remain outstanding.
+The next release criterion should be: a learner can enter interests, credential, location, and budget; receive relevant careers; compare three schools; and understand the source and limitation of every important number. The website now supports interests, credentials, state and average-net-price filtering, careers, and three-school comparison. Location-distance ranking remains outstanding.
 
 ## Current validation baseline
 
-- Python advisor/coach test suite: 7 passing tests.
+- Python advisor, coach, and external-data suite: 9 passing tests.
 - Website quality gates: ESLint and the production vinext build pass.
-- Institution comparison: selection is capped at three, the selected state is exposed with `aria-pressed`, and cost is explicitly labeled unavailable until Scorecard enrichment is connected.
+- Institution comparison: selection is capped at three; selected state is exposed with `aria-pressed`; and Scorecard average net price, tuition, completion, and earnings are shown with explicit limitations.
+- College Scorecard cache: targeted by the 300 institutions in the comparison dataset, with 189 current institution matches and cost data on 259 of 300 displayed program records after the UNITID join.
