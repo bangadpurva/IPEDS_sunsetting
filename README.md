@@ -334,6 +334,20 @@ All key parameters are defined at the top of `ipeds_bls_projections.py` under th
 
 ---
 
+## Annual data refresh
+
+When a new IPEDS completion release arrives, add `data_uni/cYYYY_a.csv` and the matching newest `data_uni/hdYYYY.csv`, then run:
+
+```bash
+python3 -m app.refresh_data --check
+python3 ipeds_bls_projections.py
+python3 -m app.build_student_data
+```
+
+The check rejects missing years and schema changes before a rebuild. Review the generated workbooks and UI, run the full test suite, and publish a new site version. The production website intentionally does not ingest unreviewed federal releases at runtime. BLS projections follow their separate biennial release cycle.
+
+---
+
 ## Outputs
 
 Running the pipeline generates the following files in `data_ipeds_bls/`:

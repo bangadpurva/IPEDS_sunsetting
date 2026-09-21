@@ -9,7 +9,7 @@ export type CoachEvidence = {
 
 export type CoachRequest = {
   message: string;
-  profile?: { interest?: string; workStyle?: string; priority?: string };
+  profile?: { interest?: string; workStyle?: string; priority?: string; budget?:number|null; timeline?:string|null; location?:string|null; credential?:string|null; learningMode?:string|null; careerGoal?:string|null };
   evidence?: CoachEvidence[];
 };
 
@@ -26,6 +26,12 @@ export function normalizeCoachRequest(value: unknown): CoachRequest {
       interest: String(raw.profile?.interest || '').slice(0, 120),
       workStyle: String(raw.profile?.workStyle || '').slice(0, 80),
       priority: String(raw.profile?.priority || '').slice(0, 80),
+      budget: Number.isFinite(raw.profile?.budget) ? Number(raw.profile?.budget) : null,
+      timeline: String(raw.profile?.timeline || '').slice(0, 80) || null,
+      location: String(raw.profile?.location || '').slice(0, 120) || null,
+      credential: String(raw.profile?.credential || '').slice(0, 100) || null,
+      learningMode: String(raw.profile?.learningMode || '').slice(0, 30) || null,
+      careerGoal: String(raw.profile?.careerGoal || '').slice(0, 140) || null,
     },
     evidence: Array.isArray(raw.evidence) ? raw.evidence.slice(0, 5).map(item => ({
       field: String(item.field || '').slice(0, 140), credential: String(item.credential || '').slice(0, 100),
@@ -51,5 +57,5 @@ export function rulesResponse(request: CoachRequest) {
 }
 
 export function modelPrompt(request: CoachRequest, fallback: ReturnType<typeof rulesResponse>, structuredProfile?:unknown) {
-  return `You are the Viascope education decision coach. Answer the learner's question using only the supplied evidence. Be warm, concise, practical, and candid about missing data. Never promise admission, employment, salary, or personal outcomes. Distinguish national field-level evidence from institution-level facts. End with one useful follow-up question.\n\nLearner profile: ${JSON.stringify(structuredProfile||request.profile)}\nEvidence: ${JSON.stringify(request.evidence)}\nDeterministic fallback: ${fallback.answer}\nLearner question: ${request.message}`;
+  return `You are the Viascope education decision coach. Answer the learner's question using only the supplied evidence. Be warm, concise, practical, and candid about missing data. Never promise admission, employment, salary, or personal outcomes. The evidence does not establish program format, price, duration, admissions, or availability: never claim a field offers an online, affordable, nearby, or time-bounded program. Distinguish national field-level evidence from institution-level facts. End with one useful follow-up question.\n\nLearner profile: ${JSON.stringify(structuredProfile||request.profile)}\nEvidence: ${JSON.stringify(request.evidence)}\nDeterministic fallback: ${fallback.answer}\nLearner question: ${request.message}`;
 }

@@ -18,14 +18,24 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 # ============================================================
 # CONFIG
 # ============================================================
-FILES_BY_YEAR: Dict[int, Union[str, Path]] = {
-    2019: "data_uni/c2019_a.csv",
-    2020: "data_uni/c2020_a.csv",
-    2021: "data_uni/c2021_a.csv",
-    2022: "data_uni/c2022_a.csv",
-    2023: "data_uni/c2023_a.csv",
-    2024: "data_uni/c2024_a.csv",
-}
+def discover_ipeds_files(data_dir: Path = Path("data_uni")) -> Dict[int, Union[str, Path]]:
+    """Discover annual IPEDS completions files so a new cYYYY_a.csv joins the next refresh."""
+    found: Dict[int, Union[str, Path]] = {}
+    for path in data_dir.glob("c????_a.csv"):
+        match = re.fullmatch(r"c(\d{4})_a\.csv", path.name, flags=re.IGNORECASE)
+        if match:
+            found[int(match.group(1))] = path
+    if len(found) < 3:
+        raise FileNotFoundError("At least three annual data_uni/cYYYY_a.csv files are required.")
+    years = sorted(found)
+    expected = list(range(years[0], years[-1] + 1))
+    missing = sorted(set(expected) - set(years))
+    if missing:
+        raise FileNotFoundError(f"IPEDS annual series has gaps: {missing}")
+    return dict(sorted(found.items()))
+
+
+FILES_BY_YEAR = discover_ipeds_files()
 
 COL_UNITID = "UNITID"
 COL_CIP = "CIPCODE"
@@ -33,9 +43,15 @@ COL_AWLEVEL = "AWLEVEL"
 COL_TOTAL = "CTOTALT"
 COL_MAJORNUM = "MAJORNUM"
 
-YEARS = list(range(2019, 2025))
+YEARS = sorted(FILES_BY_YEAR)
+START_YEAR, END_YEAR = YEARS[0], YEARS[-1]
+BASELINE_YEARS = YEARS[:3]
+BASELINE_COL = f"baseline_avg_{BASELINE_YEARS[0]}_{BASELINE_YEARS[-1]}"
+NET_CHANGE_COL = f"net_pct_change_{START_YEAR}_{END_YEAR}"
+UNSTABLE_COL = f"unstable_base_{START_YEAR}_zero"
+RECENT_CHANGE_COL = f"Recent_YoY_Change_{YEARS[-2]}_{END_YEAR}"
 
-OUT_XLSX = "data_ipeds_bls/cip_grouped_awlevel_yoy_students_2019_2024.xlsx"
+OUT_XLSX = f"data_ipeds_bls/cip_grouped_awlevel_yoy_students_{START_YEAR}_{END_YEAR}.xlsx"
 SCATTER_PATH = "data_ipeds_bls/sunset_matrix_scatter.png"
 HEATMAP_PATH = "data_ipeds_bls/sunset_matrix_heatmap.png"
 HIGHLIGHT_HEATMAP_PATH = "data_ipeds_bls/sunset_matrix_heatmap_large_declining.png"
@@ -231,19 +247,19 @@ def apply_stat_threshold_labels(wide: pd.DataFrame) -> pd.DataFrame:
     out = wide.copy()
 
     out["net_pct_winsor"] = pd.to_numeric(
-        out["net_pct_change_2019_2024"], errors="coerce"
+        out[NET_CHANGE_COL], errors="coerce"
     ).clip(WINSOR_LOW, WINSOR_HIGH)
 
     mask = (
-        out["baseline_avg_2019_2021"].notna()
-        & (out["baseline_avg_2019_2021"] > 0)
+        out[BASELINE_COL].notna()
+        & (out[BASELINE_COL] > 0)
         & out["net_pct_winsor"].notna()
-        & (~out["unstable_base_2019_zero"])
-        & (out["baseline_avg_2019_2021"] >= MIN_BASELINE_FOR_LABELS)
+        & (~out[UNSTABLE_COL])
+        & (out[BASELINE_COL] >= MIN_BASELINE_FOR_LABELS)
     )
 
     x = out.loc[mask, "net_pct_winsor"].astype(float).to_numpy()
-    w = out.loc[mask, "baseline_avg_2019_2021"].astype(float).to_numpy()
+    w = out.loc[mask, BASELINE_COL].astype(float).to_numpy()
 
     if len(x) < 10:
         out["z_score_weighted"] = np.nan
@@ -570,14 +586,14 @@ def correlate_cip_to_bls(
     prog = (
         wide.groupby(["CIP2", "CIP2_Name"], as_index=False)
         .agg(
-            Program_2019=(2019, "sum"),
-            Program_2024=(2024, "sum"),
-            Program_Baseline=("baseline_avg_2019_2021", "sum"),
+            Program_Start=(START_YEAR, "sum"),
+            Program_End=(END_YEAR, "sum"),
+            Program_Baseline=(BASELINE_COL, "sum"),
         )
     )
     prog["Program_Net_Pct_Change"] = np.where(
-        prog["Program_2019"] > 0,
-        ((prog["Program_2024"] - prog["Program_2019"]) / prog["Program_2019"]) * 100,
+        prog["Program_Start"] > 0,
+        ((prog["Program_End"] - prog["Program_Start"]) / prog["Program_Start"]) * 100,
         np.nan,
     )
 
@@ -646,7 +662,7 @@ def correlate_cip_awlevel_to_bls(
         bls_base_emp = sub_soc["BLS_Base_Employment"].sum(min_count=1)
         bls_openings = sub_soc["BLS_Annual_Openings"].sum(min_count=1)
 
-        program_net = r["net_pct_change_2019_2024"]
+        program_net = r[NET_CHANGE_COL]
         gap = program_net - bls_growth if pd.notna(program_net) and pd.notna(bls_growth) else np.nan
 
         prog_sd = pd.to_numeric(pd.Series(r[yoy_pct_cols]), errors="coerce").std()
@@ -775,16 +791,16 @@ def analyze_lag_time(
         return pd.DataFrame()
 
     prog = (
-        wide.groupby(["CIP2", "CIP2_Name"], as_index=False)[[2019, 2020, 2021, 2022, 2023, 2024]]
+        wide.groupby(["CIP2", "CIP2_Name"], as_index=False)[YEARS]
         .sum()
     )
 
     prog_yoy_rows = []
     for _, r in prog.iterrows():
-        vals = pd.Series({2019: r[2019], 2020: r[2020], 2021: r[2021], 2022: r[2022], 2023: r[2023], 2024: r[2024]})
+        vals = pd.Series({year: r[year] for year in YEARS})
         yoy = vals.pct_change() * 100
         for year, pct in yoy.items():
-            if year == 2019:
+            if year == START_YEAR:
                 continue
             prog_yoy_rows.append(
                 {
@@ -839,11 +855,11 @@ def analyze_lag_time(
                     "Lag_Correlation_Strength": r,
                     "Lag_p_value": p,
                     "N_Overlap": len(merged_lag),
-                    "Recent_YoY_Change_2023_2024": merged_lag.loc[
-                        merged_lag["YEAR"] == 2024, "IPEDS_YoY_Pct"
+                    RECENT_CHANGE_COL: merged_lag.loc[
+                        merged_lag["YEAR"] == END_YEAR, "IPEDS_YoY_Pct"
                     ].mean(),
                     "Lagged_BLS_Growth": merged_lag.loc[
-                        merged_lag["YEAR"] == 2024, "OEWS_YoY_Pct"
+                        merged_lag["YEAR"] == END_YEAR, "OEWS_YoY_Pct"
                     ].mean(),
                 }
 
@@ -852,7 +868,7 @@ def analyze_lag_time(
                 {
                     "CIP2": cip2,
                     "CIP2_Name": g_prog["CIP2_Name"].iloc[0],
-                    "Recent_YoY_Change_2023_2024": np.nan,
+                    RECENT_CHANGE_COL: np.nan,
                     "Lagged_BLS_Growth": np.nan,
                     "Estimated_Lag_Response": "Insufficient data",
                     "Lag_Months": np.nan,
@@ -873,7 +889,7 @@ def analyze_lag_time(
                 {
                     "CIP2": cip2,
                     "CIP2_Name": g_prog["CIP2_Name"].iloc[0],
-                    "Recent_YoY_Change_2023_2024": best["Recent_YoY_Change_2023_2024"],
+                    RECENT_CHANGE_COL: best[RECENT_CHANGE_COL],
                     "Lagged_BLS_Growth": best["Lagged_BLS_Growth"],
                     "Estimated_Lag_Response": response,
                     "Lag_Months": best["Lag_Months"],
@@ -891,7 +907,7 @@ def run_bls_analysis(wide: pd.DataFrame, cip2_to_soc_mapping: Dict[str, List[str
     bls_proj = load_bls_employment_projections_html()
 
     print("[BLS] Loading OEWS historical files for lag analysis...")
-    oews_hist = load_oews_national_files([2019, 2020, 2021, 2022, 2023, 2024])
+    oews_hist = load_oews_national_files(YEARS)
 
     print("[BLS] CIP2-level correlation...")
     cip_bls_corr = correlate_cip_to_bls(wide, bls_proj, cip2_to_soc_mapping)
@@ -1069,12 +1085,12 @@ def main():
 
     wide[yoy_pct_cols] = wide[yoy_pct_cols].apply(pd.to_numeric, errors="coerce").round(2)
 
-    wide["baseline_avg_2019_2021"] = wide[[2019, 2020, 2021]].mean(axis=1)
-    wide["net_pct_change_2019_2024"] = (
-        (wide[2024] - wide[2019]) / wide[2019].replace({0: np.nan})
+    wide[BASELINE_COL] = wide[BASELINE_YEARS].mean(axis=1)
+    wide[NET_CHANGE_COL] = (
+        (wide[END_YEAR] - wide[START_YEAR]) / wide[START_YEAR].replace({0: np.nan})
     ) * 100
-    wide["net_pct_change_2019_2024"] = pd.to_numeric(wide["net_pct_change_2019_2024"], errors="coerce")
-    wide["unstable_base_2019_zero"] = wide[2019] == 0
+    wide[NET_CHANGE_COL] = pd.to_numeric(wide[NET_CHANGE_COL], errors="coerce")
+    wide[UNSTABLE_COL] = wide[START_YEAR] == 0
 
     if USE_WEIGHTED_THRESHOLDS:
         if EXCLUDE_CIP2_99_FROM_DECLINE_ANALYSIS:
@@ -1104,7 +1120,7 @@ def main():
         + YEARS
         + yoy_count_cols
         + yoy_pct_cols
-        + ["baseline_avg_2019_2021", "net_pct_change_2019_2024", "unstable_base_2019_zero", "sunset_label"]
+        + [BASELINE_COL, NET_CHANGE_COL, UNSTABLE_COL, "sunset_label"]
     )
     wide[out_cols].to_excel(OUT_XLSX, index=False)
     print(f"\n[SAVE] Excel saved → {OUT_XLSX}")
@@ -1113,20 +1129,20 @@ def main():
     if EXCLUDE_CIP2_99_FROM_DECLINE_ANALYSIS:
         plot_df = plot_df[plot_df["CIP2"] != CIP2_EXCLUDED_FOR_DECLINE].copy()
 
-    plot_df["baseline_avg_2019_2021"] = pd.to_numeric(plot_df["baseline_avg_2019_2021"], errors="coerce")
-    plot_df["net_pct_change_2019_2024"] = pd.to_numeric(plot_df["net_pct_change_2019_2024"], errors="coerce")
+    plot_df[BASELINE_COL] = pd.to_numeric(plot_df[BASELINE_COL], errors="coerce")
+    plot_df[NET_CHANGE_COL] = pd.to_numeric(plot_df[NET_CHANGE_COL], errors="coerce")
     plot_df = plot_df.replace([np.inf, -np.inf], np.nan)
 
     if DROP_TINY_ROWS_FOR_PLOTS:
-        plot_df = plot_df[plot_df["baseline_avg_2019_2021"] >= MIN_BASELINE_FOR_LABELS].copy()
+        plot_df = plot_df[plot_df[BASELINE_COL] >= MIN_BASELINE_FOR_LABELS].copy()
 
-    plot_df["net_pct_for_plot"] = plot_df["net_pct_change_2019_2024"]
+    plot_df["net_pct_for_plot"] = plot_df[NET_CHANGE_COL]
     if CLIP_PCT_FOR_PLOTS:
         plot_df["net_pct_for_plot"] = plot_df["net_pct_for_plot"].clip(PCT_CLIP_LOW, PCT_CLIP_HIGH)
 
-    plot_df = plot_df.dropna(subset=["baseline_avg_2019_2021", "net_pct_for_plot"]).copy()
-    plot_df = plot_df[plot_df["baseline_avg_2019_2021"] > 0].copy()
-    size_cut = float(plot_df["baseline_avg_2019_2021"].median()) if len(plot_df) else 0.0
+    plot_df = plot_df.dropna(subset=[BASELINE_COL, "net_pct_for_plot"]).copy()
+    plot_df = plot_df[plot_df[BASELINE_COL] > 0].copy()
+    size_cut = float(plot_df[BASELINE_COL].median()) if len(plot_df) else 0.0
 
     plt.figure(figsize=(14, 8))
     label_order = ["Growth/Stable", "Moderate", "High Risk", "Unstable/NA", "Excluded (CIP2=99)"]
@@ -1135,7 +1151,7 @@ def main():
         if len(sub) == 0:
             continue
         plt.scatter(
-            sub["baseline_avg_2019_2021"].astype(float),
+            sub[BASELINE_COL].astype(float),
             sub["net_pct_for_plot"].astype(float),
             alpha=0.8,
             label=label,
@@ -1144,9 +1160,9 @@ def main():
     plt.axhline(0, linestyle="--")
     plt.axvline(size_cut, linestyle="--")
     plt.xscale("log")
-    plt.title("Sunset Matrix: Size vs Net % Change (CIP2 × AWLEVEL, 2019–2024)")
-    plt.xlabel("Baseline Size (Avg completions 2019–2021, log scale)")
-    plt.ylabel("Net % Change (2019→2024)")
+    plt.title(f"Sunset Matrix: Size vs Net % Change (CIP2 × AWLEVEL, {START_YEAR}–{END_YEAR})")
+    plt.xlabel(f"Baseline Size (Avg completions {BASELINE_YEARS[0]}–{BASELINE_YEARS[-1]}, log scale)")
+    plt.ylabel(f"Net % Change ({START_YEAR}→{END_YEAR})")
     plt.legend()
     plt.tight_layout()
     plt.savefig(SCATTER_PATH, dpi=300)
@@ -1157,14 +1173,14 @@ def main():
     if EXCLUDE_CIP2_99_FROM_DECLINE_ANALYSIS:
         heat_source = heat_source[heat_source["CIP2"] != CIP2_EXCLUDED_FOR_DECLINE].copy()
 
-    heat_source["baseline_avg_2019_2021"] = pd.to_numeric(heat_source["baseline_avg_2019_2021"], errors="coerce")
-    heat_source["net_pct_change_2019_2024"] = pd.to_numeric(heat_source["net_pct_change_2019_2024"], errors="coerce")
+    heat_source[BASELINE_COL] = pd.to_numeric(heat_source[BASELINE_COL], errors="coerce")
+    heat_source[NET_CHANGE_COL] = pd.to_numeric(heat_source[NET_CHANGE_COL], errors="coerce")
     heat_source = heat_source.replace([np.inf, -np.inf], np.nan)
 
     if DROP_TINY_ROWS_FOR_PLOTS:
-        heat_source = heat_source[heat_source["baseline_avg_2019_2021"] >= MIN_BASELINE_FOR_LABELS].copy()
+        heat_source = heat_source[heat_source[BASELINE_COL] >= MIN_BASELINE_FOR_LABELS].copy()
 
-    heat_source["net_pct_for_heat"] = heat_source["net_pct_change_2019_2024"]
+    heat_source["net_pct_for_heat"] = heat_source[NET_CHANGE_COL]
     if CLIP_PCT_FOR_PLOTS:
         heat_source["net_pct_for_heat"] = heat_source["net_pct_for_heat"].clip(PCT_CLIP_LOW, PCT_CLIP_HIGH)
 
@@ -1174,8 +1190,8 @@ def main():
 
     plt.figure(figsize=(14, 10))
     plt.imshow(heat.fillna(0).values, aspect="auto")
-    plt.colorbar(label="Median Net % Change (2019→2024)")
-    plt.title("Heatmap: Median Net % Change by Field (CIP2) and AWLEVEL (2019–2024)")
+    plt.colorbar(label=f"Median Net % Change ({START_YEAR}→{END_YEAR})")
+    plt.title(f"Heatmap: Median Net % Change by Field (CIP2) and AWLEVEL ({START_YEAR}–{END_YEAR})")
     plt.xlabel("AWLEVEL")
     plt.ylabel("Field (CIP2)")
     plt.xticks(range(len(heat.columns)), heat.columns, rotation=0)
@@ -1187,22 +1203,22 @@ def main():
 
     quad_df = plot_df.copy()
     quad_df["quadrant"] = np.where(
-        quad_df["baseline_avg_2019_2021"] >= size_cut,
+        quad_df[BASELINE_COL] >= size_cut,
         np.where(quad_df["net_pct_for_plot"] < 0, "Large Declining", "Large Growing"),
         np.where(quad_df["net_pct_for_plot"] < 0, "Small Declining", "Small Growing"),
     )
 
     top_large_declining = (
         quad_df[quad_df["quadrant"] == "Large Declining"]
-        .sort_values(by="baseline_avg_2019_2021", ascending=False)
+        .sort_values(by=BASELINE_COL, ascending=False)
         .head(15)[
             [
                 "CIP2",
                 "CIP2_Name",
                 COL_AWLEVEL,
                 "AWLEVEL_Name",
-                "baseline_avg_2019_2021",
-                "net_pct_change_2019_2024",
+                BASELINE_COL,
+                NET_CHANGE_COL,
                 "sunset_label",
             ]
         ]
@@ -1216,7 +1232,7 @@ def main():
 
     highlight_df = plot_df.copy()
     highlight_df["is_large_declining"] = (
-        (highlight_df["baseline_avg_2019_2021"] >= size_cut) & (highlight_df["net_pct_for_plot"] < 0)
+        (highlight_df[BASELINE_COL] >= size_cut) & (highlight_df["net_pct_for_plot"] < 0)
     ).astype(int)
 
     highlight_heat = highlight_df.pivot_table(
@@ -1226,7 +1242,7 @@ def main():
     plt.figure(figsize=(14, 10))
     plt.imshow(highlight_heat.values, aspect="auto")
     plt.colorbar(label="Share of Large Declining (0–1)")
-    plt.title("Heatmap: Large Declining Highlight (CIP2 × AWLEVEL, 2019–2024)")
+    plt.title(f"Heatmap: Large Declining Highlight (CIP2 × AWLEVEL, {START_YEAR}–{END_YEAR})")
     plt.xlabel("AWLEVEL")
     plt.ylabel("Field (CIP2)")
     plt.xticks(range(len(highlight_heat.columns)), highlight_heat.columns, rotation=0)

@@ -1,5 +1,5 @@
 import { modelPrompt, normalizeCoachRequest, rulesResponse } from './coach';
-import { extractLearnerProfile } from './profile';
+import { extractLearnerProfile, nextProfileQuestion } from './profile';
 import { verifyCoachAnswer } from './guardrail';
 
 type ModelResponse={output_text?:unknown;output?:Array<{content?:Array<{type?:string;text?:string}>}>;message?:{content?:string}};
@@ -37,11 +37,12 @@ export async function POST(request: Request) {
     const input = normalizeCoachRequest(await request.json());
     const fallback = rulesResponse(input);
     const profile = extractLearnerProfile(input.message,input.profile);
+    const grounded = {...fallback,nextQuestion:nextProfileQuestion(profile)};
     try {
-      const enhanced = await askConfiguredModel(modelPrompt(input, fallback, profile));
-      if (enhanced) {const verification=verifyCoachAnswer(enhanced.answer,input.evidence||[]);if(verification.passed)return Response.json({...fallback,...enhanced,profile,verification});}
+      const enhanced = await askConfiguredModel(modelPrompt(input, grounded, profile));
+      if (enhanced) {const verification=verifyCoachAnswer(enhanced.answer,input.evidence||[]);if(verification.passed)return Response.json({...grounded,...enhanced,profile,verification});}
     } catch { /* Keep the experience available when an optional provider fails. */ }
-    return Response.json({...fallback,mode:'rules',profile,verification:verifyCoachAnswer(fallback.answer,input.evidence||[])});
+    return Response.json({...grounded,mode:'rules',profile,verification:verifyCoachAnswer(grounded.answer,input.evidence||[])});
   } catch (error) {
     return Response.json({error:error instanceof Error?error.message:'Invalid request.'},{status:400});
   }

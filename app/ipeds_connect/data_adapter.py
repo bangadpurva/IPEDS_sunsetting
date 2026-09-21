@@ -101,8 +101,8 @@ def load_student_dataset(
             "CIP2_Name": "cip2_name",
             "AWLEVEL": "awlevel",
             "AWLEVEL_Name": "awlevel_name",
-            "baseline_avg_2019_2021": "baseline_avg_2019_2021",
-            "net_pct_change_2019_2024": "program_net_pct_change",
+            getattr(load_research_module(), "BASELINE_COL", "baseline_avg_2019_2021"): "baseline_avg",
+            getattr(load_research_module(), "NET_CHANGE_COL", "net_pct_change_2019_2024"): "program_net_pct_change",
             "sunset_label": "sunset_label",
         }
     )

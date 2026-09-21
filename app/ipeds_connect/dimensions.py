@@ -27,14 +27,12 @@ RACE_COLUMNS = {
     "Nonresident alien": "CNRALT",
 }
 
-DIRECTORY_CANDIDATES = (
-    "hd2024.csv",
-    "HD2024.csv",
-    "data_uni/hd2024.csv",
-    "data_uni/HD2024.csv",
-    "data/hd2024.csv",
-    "data/HD2024.csv",
-)
+def _directory_candidates() -> list[Path]:
+    """Prefer the newest available IPEDS directory file."""
+    candidates = []
+    for folder in (ROOT / "data_uni", ROOT / "data", ROOT):
+        candidates.extend(folder.glob("[hH][dD][0-9][0-9][0-9][0-9].csv"))
+    return sorted(set(candidates), reverse=True)
 
 
 def _clean_number(value: Any) -> float | int | str | None:
@@ -57,8 +55,7 @@ def _records(df: pd.DataFrame) -> list[dict]:
 
 
 def _directory_lookup() -> pd.DataFrame:
-    for candidate in DIRECTORY_CANDIDATES:
-        path = ROOT / candidate
+    for path in _directory_candidates():
         if path.exists():
             hd = pd.read_csv(path, dtype=str, low_memory=False)
             rename = {
@@ -120,7 +117,9 @@ def _load_a_files() -> pd.DataFrame:
 
 
 def _institution_trends(a_files: pd.DataFrame, directory: pd.DataFrame) -> pd.DataFrame:
-    years = list(range(2019, 2025))
+    years = sorted(int(year) for year in a_files["YEAR"].unique())
+    start_year, end_year = years[0], years[-1]
+    baseline_years = years[:3]
     grouped = (
         a_files.groupby(["UNITID", "CIP2", "CIP2_Name", "AWLEVEL", "AWLEVEL_Name", "YEAR"], as_index=False)
         .agg(completions=("CTOTALT", "sum"))
@@ -136,15 +135,17 @@ def _institution_trends(a_files: pd.DataFrame, directory: pd.DataFrame) -> pd.Da
         .fillna(0)
         .reset_index()
     )
-    wide["change_2019_2024"] = wide[2024] - wide[2019]
-    wide["pct_change_2019_2024"] = np.where(
-        wide[2019] > 0,
-        (wide["change_2019_2024"] / wide[2019]) * 100,
+    wide["completion_change"] = wide[end_year] - wide[start_year]
+    wide["program_pct_change"] = np.where(
+        wide[start_year] > 0,
+        (wide["completion_change"] / wide[start_year]) * 100,
         np.nan,
     )
-    wide["baseline_avg_2019_2021"] = wide[[2019, 2020, 2021]].mean(axis=1)
+    # Backward-compatible API field; remove after the frontend migrates to program_pct_change.
+    wide["pct_change_2019_2024"] = wide["program_pct_change"]
+    wide["baseline_avg"] = wide[baseline_years].mean(axis=1)
     wide["trend_direction"] = np.select(
-        [wide["change_2019_2024"] <= -5, wide["change_2019_2024"] >= 5],
+        [wide["completion_change"] <= -5, wide["completion_change"] >= 5],
         ["Declining", "Increasing"],
         default="Flat/small change",
     )
@@ -158,8 +159,8 @@ def _institution_trends(a_files: pd.DataFrame, directory: pd.DataFrame) -> pd.Da
 
     ranked = pd.concat(
         [
-            wide.sort_values("change_2019_2024").head(150),
-            wide.sort_values("change_2019_2024", ascending=False).head(150),
+            wide.sort_values("completion_change").head(150),
+            wide.sort_values("completion_change", ascending=False).head(150),
         ],
         ignore_index=True,
     ).drop_duplicates(subset=["UNITID", "CIP2", "AWLEVEL"])
@@ -167,7 +168,7 @@ def _institution_trends(a_files: pd.DataFrame, directory: pd.DataFrame) -> pd.Da
 
 
 def _demographics(a_files: pd.DataFrame) -> dict[str, list[dict]]:
-    latest = a_files[a_files["YEAR"] == 2024].copy()
+    latest = a_files[a_files["YEAR"] == a_files["YEAR"].max()].copy()
     group_cols = ["CIP2", "CIP2_Name", "AWLEVEL", "AWLEVEL_Name"]
 
     gender = latest.groupby(group_cols, as_index=False).agg(
