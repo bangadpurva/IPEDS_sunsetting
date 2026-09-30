@@ -28,15 +28,18 @@ can be reproduced without re-fetching from bls.gov every time.
   This data is BLS/SOC-side only -- it has no dependency on the CIP2 parsing
   bug that was fixed in `ipeds_bls_projections.py`, so it remains valid to
   reuse as-is.
-- `oews/oesm{YY}nat.zip` -- OEWS national employment files for YY = 19..24,
-  used only for the lag-response analysis. Not yet recovered from any prior
-  run; download manually from
-  `https://www.bls.gov/oes/special-requests/oesm{YY}nat.zip` (e.g. via a
-  regular browser, which is not blocked) and place the six zip files here.
+- `oews/oesm{YY}nat/` (YY = 19..24) -- OEWS national employment files, used
+  only for the lag-response analysis. Downloaded manually on 2026-09-30 from
+  `https://www.bls.gov/oes/special-requests/oesm{YY}nat.zip` (browsers are
+  not blocked by BLS's bot protection). Each folder is the browser's
+  auto-extracted contents of that zip (macOS Safari extracts zip downloads
+  by default) and contains one spreadsheet, `national_M{YEAR}_dl.xlsx`.
 
 ## How the script uses this folder
 
 `load_bls_employment_projections_html()` and `load_oews_national_files()`
 both check this folder first and use a cached/local file when present,
-falling back to a live `requests.get()` only if it's missing. Delete a file
-here (and re-run) to force a fresh live fetch of that specific input.
+falling back to a live `requests.get()` only if it's missing. For OEWS, both
+a `oesm{YY}nat.zip` file and an already-extracted `oesm{YY}nat/` folder are
+accepted. Delete a file/folder here (and re-run) to force a fresh live fetch
+of that specific input.

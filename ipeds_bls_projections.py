@@ -471,56 +471,75 @@ def load_oews_national_files(years: List[int]) -> pd.DataFrame:
     """
     records = []
 
+    def _pick_sheet(xls: "pd.ExcelFile"):
+        picked = None
+        for sheet in xls.sheet_names:
+            tmp = pd.read_excel(xls, sheet_name=sheet)
+            cols = [str(c).strip().lower() for c in tmp.columns]
+            has_occ = any(c in cols for c in ["occ_code", "occupation code"])
+            has_emp = any(c in cols for c in ["tot_emp", "employment"])
+            if has_occ and has_emp:
+                picked = tmp
+                break
+        if picked is None:
+            picked = pd.read_excel(xls, sheet_name=xls.sheet_names[0])
+        return picked
+
     for year in years:
         yy = str(year)[-2:]
         zip_url = f"https://www.bls.gov/oes/special-requests/oesm{yy}nat.zip"
 
         local_zip = BLS_OEWS_CACHE_DIR / f"oesm{yy}nat.zip"
+        # A browser download of the zip is often auto-extracted into a folder
+        # of the same base name (e.g. macOS Safari does this by default) --
+        # accept that layout too so the user doesn't have to re-zip anything.
+        local_dir = BLS_OEWS_CACHE_DIR / f"oesm{yy}nat"
 
         try:
-            if local_zip.exists():
-                print(f"[OEWS] Using local file for {year}: {local_zip}")
-                zip_bytes = local_zip.read_bytes()
-            else:
-                r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
-                r.raise_for_status()
-                zip_bytes = r.content
-
-            zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
-            names = zf.namelist()
-
-            # Prefer xlsx, but accept xls/csv if BLS changes packaging
-            target = None
-            for ext in (".xlsx", ".xls", ".csv"):
-                target = next((n for n in names if n.lower().endswith(ext)), None)
-                if target is not None:
-                    break
-
-            if target is None:
-                print(f"[WARN] No spreadsheet file found inside {zip_url}. Contents: {names}")
-                continue
-
-            with zf.open(target) as f:
-                if target.lower().endswith(".csv"):
-                    raw = pd.read_csv(f, low_memory=False)
+            if local_dir.is_dir():
+                candidates = [
+                    p for p in local_dir.rglob("*")
+                    if p.suffix.lower() in (".xlsx", ".xls", ".csv") and not p.name.startswith("~$")
+                ]
+                if not candidates:
+                    print(f"[WARN] No spreadsheet file found inside {local_dir}.")
+                    continue
+                target_path = candidates[0]
+                print(f"[OEWS] Using local extracted folder for {year}: {target_path}")
+                if target_path.suffix.lower() == ".csv":
+                    raw = pd.read_csv(target_path, low_memory=False)
                 else:
-                    xls_bytes = io.BytesIO(f.read())
-                    xls = pd.ExcelFile(xls_bytes)
+                    raw = _pick_sheet(pd.ExcelFile(target_path))
 
-                    raw = None
-                    for sheet in xls.sheet_names:
-                        tmp = pd.read_excel(xls, sheet_name=sheet)
-                        cols = [str(c).strip().lower() for c in tmp.columns]
+            else:
+                if local_zip.exists():
+                    print(f"[OEWS] Using local zip for {year}: {local_zip}")
+                    zip_bytes = local_zip.read_bytes()
+                else:
+                    r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
+                    r.raise_for_status()
+                    zip_bytes = r.content
 
-                        has_occ = any(c in cols for c in ["occ_code", "occupation code"])
-                        has_emp = any(c in cols for c in ["tot_emp", "employment"])
-                        if has_occ and has_emp:
-                            raw = tmp
-                            break
+                zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+                names = zf.namelist()
 
-                    if raw is None:
-                        # fallback to first sheet
-                        raw = pd.read_excel(xls, sheet_name=xls.sheet_names[0])
+                # Prefer xlsx, but accept xls/csv if BLS changes packaging
+                target = None
+                for ext in (".xlsx", ".xls", ".csv"):
+                    target = next((n for n in names if n.lower().endswith(ext)), None)
+                    if target is not None:
+                        break
+
+                if target is None:
+                    print(f"[WARN] No spreadsheet file found inside {zip_url}. Contents: {names}")
+                    continue
+
+                with zf.open(target) as f:
+                    if target.lower().endswith(".csv"):
+                        raw = pd.read_csv(f, low_memory=False)
+                    else:
+                        xls_bytes = io.BytesIO(f.read())
+                        raw = _pick_sheet(pd.ExcelFile(xls_bytes))
 
             raw.columns = [str(c).strip() for c in raw.columns]
 
