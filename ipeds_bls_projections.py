@@ -84,6 +84,15 @@ BLS_HEADERS = {
 BLS_PROJ_HTML = "https://www.bls.gov/emp/tables/occupational-projections-and-characteristics.htm"
 BLS_OEWS_TABLES_PAGE = "https://www.bls.gov/oes/tables.htm"
 
+# Local frozen-snapshot cache (see bls_raw_cache/README.md). Used first when
+# present so re-runs reproduce the manuscript's original 2024-34 BLS
+# projections vintage instead of silently picking up whatever vintage is
+# currently live on bls.gov, and so a live bls.gov block doesn't stop the
+# rest of the pipeline from running.
+BLS_CACHE_DIR = Path("bls_raw_cache")
+BLS_PROJECTIONS_CACHE = BLS_CACHE_DIR / "bls_projections_2024_2034.xlsx"
+BLS_OEWS_CACHE_DIR = BLS_CACHE_DIR / "oews"
+
 # ============================================================
 # CIP2 / AWLEVEL LABELS
 # ============================================================
@@ -402,6 +411,12 @@ def _normalize_projection_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_bls_employment_projections_html() -> pd.DataFrame:
+    if BLS_PROJECTIONS_CACHE.exists():
+        print(f"[BLS] Using cached projections table: {BLS_PROJECTIONS_CACHE} "
+              f"(2024-34 vintage, matches manuscript methodology)")
+        cached = pd.read_excel(BLS_PROJECTIONS_CACHE)
+        return cached
+
     resp = requests.get(BLS_PROJ_HTML, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
     resp.raise_for_status()
 
@@ -460,11 +475,18 @@ def load_oews_national_files(years: List[int]) -> pd.DataFrame:
         yy = str(year)[-2:]
         zip_url = f"https://www.bls.gov/oes/special-requests/oesm{yy}nat.zip"
 
-        try:
-            r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
-            r.raise_for_status()
+        local_zip = BLS_OEWS_CACHE_DIR / f"oesm{yy}nat.zip"
 
-            zf = zipfile.ZipFile(io.BytesIO(r.content))
+        try:
+            if local_zip.exists():
+                print(f"[OEWS] Using local file for {year}: {local_zip}")
+                zip_bytes = local_zip.read_bytes()
+            else:
+                r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
+                r.raise_for_status()
+                zip_bytes = r.content
+
+            zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
             names = zf.namelist()
 
             # Prefer xlsx, but accept xls/csv if BLS changes packaging
