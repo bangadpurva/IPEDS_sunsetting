@@ -107,10 +107,13 @@ CIP2_TO_NAME = {
     "25": "Library Science",
     "26": "Biological & Biomedical Sciences",
     "27": "Mathematics & Statistics",
+    "29": "Military Technologies & Applied Sciences",
     "30": "Multi/Interdisciplinary Studies",
     "31": "Parks, Recreation, Fitness",
     "38": "Philosophy & Religious Studies",
+    "39": "Theology & Religious Vocations",
     "40": "Physical Sciences",
+    "41": "Science Technologies/Technicians",
     "42": "Psychology",
     "43": "Homeland Security & Law Enforcement",
     "44": "Public Administration & Social Service",
@@ -1002,7 +1005,7 @@ def main():
         if not path.exists():
             raise FileNotFoundError(f"Missing file for {year}: {path}")
 
-        df = pd.read_csv(path, low_memory=False)
+        df = pd.read_csv(path, low_memory=False, dtype={COL_CIP: str, COL_AWLEVEL: str})
         required = [COL_CIP, COL_AWLEVEL, COL_TOTAL]
         missing = [c for c in required if c not in df.columns]
         if missing:
@@ -1010,6 +1013,16 @@ def main():
 
         df[COL_CIP] = df[COL_CIP].astype("string").str.strip()
         df[COL_AWLEVEL] = df[COL_AWLEVEL].astype("string").str.strip()
+        # NCES changed raw AWLEVEL encoding across years: zero-padded ("01"-"08")
+        # in 2019-2022 files, unpadded ("1"-"8") in 2023-2024 files. Normalize to a
+        # single consistent zero-padded 2-digit form so the same award level always
+        # resolves to the same groupby key regardless of source year's raw format.
+        df[COL_AWLEVEL] = (
+            pd.to_numeric(df[COL_AWLEVEL], errors="coerce")
+            .astype("Int64")
+            .astype("string")
+            .str.zfill(2)
+        )
         df[COL_TOTAL] = pd.to_numeric(df[COL_TOTAL], errors="coerce").fillna(0)
 
         if KEEP_PRIMARY_MAJOR_ONLY and COL_MAJORNUM in df.columns:
