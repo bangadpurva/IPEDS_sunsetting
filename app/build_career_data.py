@@ -7,7 +7,9 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 crosswalk = pd.read_excel(ROOT / "CIP2020_SOC2018_Crosswalk.xlsx", sheet_name="CIP-SOC")
-bls = pd.read_excel(ROOT / "data_uni/bls_correlation_analysis.xlsx", sheet_name="BLS_Projections_Raw")
+current_bls = ROOT / "data_ipeds_bls/bls_correlation_analysis.xlsx"
+legacy_bls = ROOT / "data_uni/bls_correlation_analysis.xlsx"
+bls = pd.read_excel(current_bls if current_bls.exists() else legacy_bls, sheet_name="BLS_Projections_Raw")
 
 crosswalk["cip2"] = crosswalk["CIP2020Code"].astype(str).str.split(".").str[0].astype(int)
 crosswalk["SOC2018Code"] = crosswalk["SOC2018Code"].astype(str).str.strip()

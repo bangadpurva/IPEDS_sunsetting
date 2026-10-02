@@ -99,6 +99,9 @@ BLS_HEADERS = {
 }
 BLS_PROJ_HTML = "https://www.bls.gov/emp/tables/occupational-projections-and-characteristics.htm"
 BLS_OEWS_TABLES_PAGE = "https://www.bls.gov/oes/tables.htm"
+BLS_CACHE_DIR = Path("bls_raw_cache")
+BLS_PROJECTIONS_CACHE = BLS_CACHE_DIR / "bls_projections_2024_2034.xlsx"
+BLS_OEWS_CACHE_DIR = BLS_CACHE_DIR / "oews"
 
 # ============================================================
 # CIP2 / AWLEVEL LABELS
@@ -123,10 +126,13 @@ CIP2_TO_NAME = {
     "25": "Library Science",
     "26": "Biological & Biomedical Sciences",
     "27": "Mathematics & Statistics",
+    "29": "Military Technologies & Applied Sciences",
     "30": "Multi/Interdisciplinary Studies",
     "31": "Parks, Recreation, Fitness",
     "38": "Philosophy & Religious Studies",
+    "39": "Theology & Religious Vocations",
     "40": "Physical Sciences",
+    "41": "Science Technologies/Technicians",
     "42": "Psychology",
     "43": "Homeland Security & Law Enforcement",
     "44": "Public Administration & Social Service",
@@ -181,6 +187,11 @@ def awlevel_name(code: str) -> str:
 # ============================================================
 def extract_cip2_series(cip_series: pd.Series) -> pd.Series:
     return cip_series.astype("string").str.strip().str.extract(r"^(\d{2})", expand=False)
+
+
+def normalize_awlevel_series(series: pd.Series) -> pd.Series:
+    """Normalize NCES award-level codes across padded and unpadded vintages."""
+    return pd.to_numeric(series, errors="coerce").astype("Int64").astype("string").str.zfill(2)
 
 
 def weighted_mean_std(x: np.ndarray, w: np.ndarray) -> tuple[float, float]:
@@ -415,6 +426,10 @@ def _normalize_projection_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_bls_employment_projections_html() -> pd.DataFrame:
+    if BLS_PROJECTIONS_CACHE.exists():
+        print(f"[BLS] Using cached projections table: {BLS_PROJECTIONS_CACHE}")
+        return pd.read_excel(BLS_PROJECTIONS_CACHE)
+
     resp = requests.get(BLS_PROJ_HTML, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
     resp.raise_for_status()
 
@@ -469,49 +484,52 @@ def load_oews_national_files(years: List[int]) -> pd.DataFrame:
     """
     records = []
 
+    def _pick_sheet(xls: "pd.ExcelFile"):
+        for sheet in xls.sheet_names:
+            candidate = pd.read_excel(xls, sheet_name=sheet)
+            cols = [str(c).strip().lower() for c in candidate.columns]
+            if any(c in cols for c in ["occ_code", "occupation code"]) and any(c in cols for c in ["tot_emp", "employment"]):
+                return candidate
+        return pd.read_excel(xls, sheet_name=xls.sheet_names[0])
+
     for year in years:
         yy = str(year)[-2:]
         zip_url = f"https://www.bls.gov/oes/special-requests/oesm{yy}nat.zip"
+        local_zip = BLS_OEWS_CACHE_DIR / f"oesm{yy}nat.zip"
+        local_dir = BLS_OEWS_CACHE_DIR / f"oesm{yy}nat"
 
         try:
-            r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
-            r.raise_for_status()
-
-            zf = zipfile.ZipFile(io.BytesIO(r.content))
-            names = zf.namelist()
-
-            # Prefer xlsx, but accept xls/csv if BLS changes packaging
-            target = None
-            for ext in (".xlsx", ".xls", ".csv"):
-                target = next((n for n in names if n.lower().endswith(ext)), None)
-                if target is not None:
-                    break
-
-            if target is None:
-                print(f"[WARN] No spreadsheet file found inside {zip_url}. Contents: {names}")
-                continue
-
-            with zf.open(target) as f:
-                if target.lower().endswith(".csv"):
-                    raw = pd.read_csv(f, low_memory=False)
+            if local_dir.is_dir():
+                candidates = [p for p in local_dir.rglob("*") if p.suffix.lower() in (".xlsx", ".xls", ".csv") and not p.name.startswith("~$")]
+                if not candidates:
+                    print(f"[WARN] No spreadsheet file found inside {local_dir}.")
+                    continue
+                target_path = candidates[0]
+                print(f"[OEWS] Using local extracted folder for {year}: {target_path}")
+                raw = pd.read_csv(target_path, low_memory=False) if target_path.suffix.lower() == ".csv" else _pick_sheet(pd.ExcelFile(target_path))
+                raw.columns = [str(c).strip() for c in raw.columns]
+                target = None
+            else:
+                if local_zip.exists():
+                    print(f"[OEWS] Using local zip for {year}: {local_zip}")
+                    zip_bytes = local_zip.read_bytes()
                 else:
-                    xls_bytes = io.BytesIO(f.read())
-                    xls = pd.ExcelFile(xls_bytes)
+                    r = requests.get(zip_url, headers=BLS_HEADERS, timeout=BLS_TIMEOUT)
+                    r.raise_for_status()
+                    zip_bytes = r.content
 
-                    raw = None
-                    for sheet in xls.sheet_names:
-                        tmp = pd.read_excel(xls, sheet_name=sheet)
-                        cols = [str(c).strip().lower() for c in tmp.columns]
-
-                        has_occ = any(c in cols for c in ["occ_code", "occupation code"])
-                        has_emp = any(c in cols for c in ["tot_emp", "employment"])
-                        if has_occ and has_emp:
-                            raw = tmp
-                            break
-
-                    if raw is None:
-                        # fallback to first sheet
-                        raw = pd.read_excel(xls, sheet_name=xls.sheet_names[0])
+                zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
+                target = None
+                names = zf.namelist()
+                for ext in (".xlsx", ".xls", ".csv"):
+                    target = next((n for n in names if n.lower().endswith(ext)), None)
+                    if target is not None:
+                        break
+                if target is None:
+                    print(f"[WARN] No spreadsheet file found inside {zip_url}. Contents: {names}")
+                    continue
+                with zf.open(target) as f:
+                    raw = pd.read_csv(f, low_memory=False) if target.lower().endswith(".csv") else _pick_sheet(pd.ExcelFile(io.BytesIO(f.read())))
 
             raw.columns = [str(c).strip() for c in raw.columns]
 
@@ -1018,14 +1036,14 @@ def main():
         if not path.exists():
             raise FileNotFoundError(f"Missing file for {year}: {path}")
 
-        df = pd.read_csv(path, low_memory=False)
+        df = pd.read_csv(path, low_memory=False, dtype={COL_CIP: str, COL_AWLEVEL: str})
         required = [COL_CIP, COL_AWLEVEL, COL_TOTAL]
         missing = [c for c in required if c not in df.columns]
         if missing:
             raise ValueError(f"{path} missing columns: {missing}")
 
         df[COL_CIP] = df[COL_CIP].astype("string").str.strip()
-        df[COL_AWLEVEL] = df[COL_AWLEVEL].astype("string").str.strip()
+        df[COL_AWLEVEL] = normalize_awlevel_series(df[COL_AWLEVEL])
         df[COL_TOTAL] = pd.to_numeric(df[COL_TOTAL], errors="coerce").fillna(0)
 
         if KEEP_PRIMARY_MAJOR_ONLY and COL_MAJORNUM in df.columns:

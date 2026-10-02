@@ -82,10 +82,12 @@ def _load_a_files() -> pd.DataFrame:
     research = load_research_module()
     frames = []
     for year, path in getattr(research, "FILES_BY_YEAR").items():
-        df = pd.read_csv(ROOT / path, low_memory=False)
+        df = pd.read_csv(ROOT / path, low_memory=False, dtype={"CIPCODE": str, "AWLEVEL": str})
         df["YEAR"] = year
         df["UNITID"] = df["UNITID"].astype(str).str.strip()
-        df["CIP2"] = df["CIPCODE"].astype("string").str.extract(r"^(\d{2})", expand=False)
+        df["CIPCODE"] = df["CIPCODE"].astype("string").str.strip()
+        df["AWLEVEL"] = research.normalize_awlevel_series(df["AWLEVEL"])
+        df["CIP2"] = df["CIPCODE"].str.extract(r"^(\d{2})", expand=False)
         df["CIP2_Name"] = df["CIP2"].apply(research.cip2_name)
         df["AWLEVEL_Name"] = df["AWLEVEL"].astype(str).apply(research.awlevel_name)
         if getattr(research, "KEEP_PRIMARY_MAJOR_ONLY", True) and "MAJORNUM" in df.columns:
